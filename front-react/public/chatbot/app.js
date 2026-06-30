@@ -563,6 +563,42 @@ shopGroup.add(stall);
 // Deux robots de guichet avec grosses moustaches
 const moustacheRobots = [];
 const eyeShopMat = new THREE.MeshStandardMaterial({ color: 0x38e1d6, emissive: 0x38e1d6, emissiveIntensity: 1.2 });
+
+function makeCurledMustache(mat) {
+  const moustache = new THREE.Group();
+
+  const center = new THREE.Mesh(new THREE.SphereGeometry(0.085, 16, 16), mat);
+  center.scale.set(1.05, 0.72, 0.5);
+  center.position.z = 0.035;
+  moustache.add(center);
+
+  for (const sx of [-1, 1]) {
+    const curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(sx * 0.02, -0.005, 0.02),
+      new THREE.Vector3(sx * 0.16, -0.05, 0.055),
+      new THREE.Vector3(sx * 0.34, -0.02, 0.06),
+      new THREE.Vector3(sx * 0.45, 0.08, 0.045),
+    ]);
+    const strand = new THREE.Mesh(new THREE.TubeGeometry(curve, 32, 0.045, 12, false), mat);
+    moustache.add(strand);
+
+    const lobe = new THREE.Mesh(new THREE.SphereGeometry(0.105, 18, 14), mat);
+    lobe.scale.set(1.65, 0.72, 0.5);
+    lobe.position.set(sx * 0.18, -0.04, 0.055);
+    lobe.rotation.z = sx * -0.12;
+    moustache.add(lobe);
+
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.065, 0.18, 16), mat);
+    tip.position.set(sx * 0.49, 0.105, 0.045);
+    tip.rotation.z = sx * -0.78;
+    tip.rotation.x = Math.PI / 2;
+    moustache.add(tip);
+  }
+
+  moustache.scale.set(1.38, 1.05, 0.82);
+  return moustache;
+}
+
 function makeMustacheRobot(x, z, jacketColor) {
   const g = new THREE.Group();
   g.position.set(x, 0, z);
@@ -579,19 +615,8 @@ function makeMustacheRobot(x, z, jacketColor) {
     eye.position.set(ex, 0.42, 0.33); g.add(eye);
   }
 
-  const moustache = new THREE.Group();
-  for (const sx of [-1, 1]) {
-    const curl = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.045, 10, 24, Math.PI * 1.35), moustacheMat);
-    curl.position.set(sx * 0.17, 0, 0);
-    curl.rotation.z = sx * 0.35;
-    curl.rotation.y = sx * 0.18;
-    moustache.add(curl);
-    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 12), moustacheMat);
-    tip.position.set(sx * 0.35, 0.02, 0.02);
-    moustache.add(tip);
-  }
-  moustache.scale.set(1.45, 0.78, 0.72);
-  moustache.position.set(0, 0.22, 0.38);
+  const moustache = makeCurledMustache(moustacheMat);
+  moustache.position.set(0, 0.22, 0.39);
   g.add(moustache);
 
   const bow = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.08, 0.05), redMat);
@@ -653,17 +678,162 @@ kFinger.position.set(0, -1.05, 0.04); keeperArm.add(kFinger);
 keeperArm.rotation.z = 1.85;            // tend le bras vers le haut/droite (vers l'écran)
 shopGroup.add(keeper);
 
+// ====================== SCÈNE TIR AU BUT ======================
+const penaltyGroup = new THREE.Group();
+penaltyGroup.position.set(-15, 0, 6);
+penaltyGroup.rotation.y = Math.PI / 2;
+penaltyGroup.visible = false;
+scene.add(penaltyGroup);
+
+const grassMat = new THREE.MeshStandardMaterial({ color: 0x2e9c5a, roughness: 0.75 });
+const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf9fbff, roughness: 0.35 });
+const netMat = new THREE.MeshBasicMaterial({ color: 0xdff7ff, transparent: true, opacity: 0.38 });
+const penaltyWall = new THREE.Mesh(new THREE.PlaneGeometry(18, 14), wallMat);
+penaltyWall.position.set(0, 4, -5.6); penaltyGroup.add(penaltyWall);
+const penaltyTrim = new THREE.Mesh(new THREE.BoxGeometry(18, 0.25, 0.25), goldMat);
+penaltyTrim.position.set(0, 0.4, -5.5); penaltyGroup.add(penaltyTrim);
+const pitch = new THREE.Mesh(new THREE.PlaneGeometry(15, 12), grassMat);
+pitch.rotation.x = -Math.PI / 2; pitch.position.set(0, -1.96, -0.2); penaltyGroup.add(pitch);
+const spot = new THREE.Mesh(new THREE.CircleGeometry(0.16, 24), whiteMat);
+spot.rotation.x = -Math.PI / 2; spot.position.set(0, -1.94, 2.2); penaltyGroup.add(spot);
+for (const x of [-2.2, 2.2]) {
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.1, 16), whiteMat);
+  post.position.set(x, -0.9, -4.15); penaltyGroup.add(post);
+}
+const crossbar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 4.5, 16), whiteMat);
+crossbar.rotation.z = Math.PI / 2; crossbar.position.set(0, 0.15, -4.15); penaltyGroup.add(crossbar);
+const goalNet = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 2.1), netMat);
+goalNet.position.set(0, -0.9, -4.28); penaltyGroup.add(goalNet);
+const goalTargetMat = new THREE.MeshBasicMaterial({
+  color: 0xffffff,
+  transparent: true,
+  opacity: 0,
+  depthWrite: false,
+});
+const goalTarget = new THREE.Mesh(new THREE.PlaneGeometry(4.35, 2.05), goalTargetMat);
+goalTarget.position.set(0, -0.9, -4.0);
+penaltyGroup.add(goalTarget);
+for (let i = 0; i <= 6; i++) {
+  const x = -2.25 + i * 0.75;
+  const line = new THREE.Mesh(new THREE.BoxGeometry(0.02, 2.05, 0.02), netMat);
+  line.position.set(x, -0.9, -4.24); penaltyGroup.add(line);
+}
+for (let i = 0; i <= 4; i++) {
+  const y = -1.92 + i * 0.52;
+  const line = new THREE.Mesh(new THREE.BoxGeometry(4.45, 0.02, 0.02), netMat);
+  line.position.set(0, y, -4.23); penaltyGroup.add(line);
+}
+
+const penaltyKeeper = new THREE.Group();
+const pkBody = new THREE.Mesh(new RoundedBoxGeometry(0.7, 0.9, 0.45, 5, 0.13), darkMat);
+pkBody.position.y = -1.15; penaltyKeeper.add(pkBody);
+const pkHead = new THREE.Mesh(new RoundedBoxGeometry(0.62, 0.5, 0.48, 5, 0.12), bodyMat);
+pkHead.position.y = -0.45; penaltyKeeper.add(pkHead);
+for (const ex of [-0.16, 0.16]) {
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 12), eyeShopMat);
+  eye.position.set(ex, -0.43, 0.26); penaltyKeeper.add(eye);
+}
+for (const sx of [-1, 1]) {
+  const arm = new THREE.Mesh(new RoundedBoxGeometry(0.18, 0.82, 0.18, 4, 0.08), bodyMat);
+  arm.position.set(sx * 0.58, -1.08, 0.02);
+  arm.rotation.z = sx * -0.55;
+  penaltyKeeper.add(arm);
+}
+penaltyKeeper.position.set(0, 0, -3.72);
+penaltyGroup.add(penaltyKeeper);
+
+const ballGroup = new THREE.Group();
+const ballMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
+const ballPatchMat = new THREE.MeshStandardMaterial({ color: 0x101a2c, roughness: 0.45 });
+const ball = new THREE.Mesh(new THREE.SphereGeometry(0.22, 28, 28), ballMat);
+ballGroup.add(ball);
+for (let i = 0; i < 6; i++) {
+  const patch = new THREE.Mesh(new THREE.CircleGeometry(0.055, 5), ballPatchMat);
+  const a = i * Math.PI / 3;
+  patch.position.set(Math.cos(a) * 0.12, Math.sin(a) * 0.08, 0.19);
+  ballGroup.add(patch);
+}
+ballGroup.position.set(0, -1.72, 2.2);
+penaltyGroup.add(ballGroup);
+
+const penaltyStart = new THREE.Vector3(0, -1.72, 2.2);
+let penaltyShot = null;
+let penaltyGoals = Number(localStorage.getItem('techcorp-penalty-goals') || '0');
+let penaltyAttempts = Number(localStorage.getItem('techcorp-penalty-attempts') || '0');
+
+// ====================== SCÈNE BLACKJACK ======================
+const blackjackGroup = new THREE.Group();
+blackjackGroup.position.set(0, 0, 13.5);
+blackjackGroup.rotation.y = Math.PI;
+blackjackGroup.visible = false;
+scene.add(blackjackGroup);
+
+const blackjackWall = new THREE.Mesh(new THREE.PlaneGeometry(18, 14), wallMat);
+blackjackWall.position.set(0, 4, -5.6); blackjackGroup.add(blackjackWall);
+const blackjackTrim = new THREE.Mesh(new THREE.BoxGeometry(18, 0.25, 0.25), goldMat);
+blackjackTrim.position.set(0, 0.4, -5.5); blackjackGroup.add(blackjackTrim);
+const tableFeltMat = new THREE.MeshStandardMaterial({ color: 0x0f6b43, roughness: 0.78, metalness: 0.04 });
+const tableWoodMat = new THREE.MeshStandardMaterial({ color: 0x6b430f, roughness: 0.5, metalness: 0.12 });
+const tableTop = new THREE.Mesh(new THREE.CylinderGeometry(3.25, 3.25, 0.26, 64), tableFeltMat);
+tableTop.scale.set(1.62, 1, 1.02);
+tableTop.position.set(0, -1.22, -0.35);
+blackjackGroup.add(tableTop);
+const tableRim = new THREE.Mesh(new THREE.TorusGeometry(3.26, 0.14, 14, 96), tableWoodMat);
+tableRim.scale.set(1.62, 1.02, 1);
+tableRim.rotation.x = Math.PI / 2;
+tableRim.position.set(0, -1.06, -0.35);
+blackjackGroup.add(tableRim);
+for (const x of [-3.2, 3.2]) {
+  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 1.2, 14), tableWoodMat);
+  leg.position.set(x, -1.82, -0.35); blackjackGroup.add(leg);
+}
+const bjDealerCards3D = new THREE.Group();
+bjDealerCards3D.position.set(0, -0.84, -1.75);
+blackjackGroup.add(bjDealerCards3D);
+const bjPlayerCards3D = new THREE.Group();
+bjPlayerCards3D.position.set(0, -0.82, 1.28);
+blackjackGroup.add(bjPlayerCards3D);
+
+const bjDealer = new THREE.Group();
+const bjDealerBody = new THREE.Mesh(new RoundedBoxGeometry(0.92, 1.0, 0.55, 5, 0.14), darkMat);
+bjDealerBody.position.y = -0.95; bjDealer.add(bjDealerBody);
+const bjDealerHead = new THREE.Mesh(new RoundedBoxGeometry(0.72, 0.62, 0.58, 5, 0.14), bodyMat);
+bjDealerHead.position.y = -0.25; bjDealer.add(bjDealerHead);
+for (const ex of [-0.18, 0.18]) {
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 12), eyeShopMat);
+  eye.position.set(ex, -0.23, 0.31); bjDealer.add(eye);
+}
+const bjBow = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.08, 0.05), redMat);
+bjBow.position.set(0, -0.62, 0.3); bjDealer.add(bjBow);
+bjDealer.position.set(0, 0, -2.65);
+blackjackGroup.add(bjDealer);
+
+const bjSignCv = document.createElement('canvas'); bjSignCv.width = 512; bjSignCv.height = 160;
+const bjSignCtx = bjSignCv.getContext('2d');
+bjSignCtx.fillStyle = '#06121f'; bjSignCtx.fillRect(0, 0, 512, 160);
+bjSignCtx.fillStyle = '#e7b53a'; bjSignCtx.font = 'bold 56px Segoe UI, sans-serif';
+bjSignCtx.textAlign = 'center'; bjSignCtx.textBaseline = 'middle'; bjSignCtx.fillText('BLACKJACK 3D', 256, 80);
+const bjSign = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 1.5), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(bjSignCv) }));
+bjSign.position.set(0, 2.2, -5.25);
+blackjackGroup.add(bjSign);
+
 // ---------- Interaction : rotation (drag) + zoom (molette) ----------
 const baseOffset = camEndPos.clone().sub(camEndTarget);   // cadrage de référence (zoom = 1)
 let zoom = 1, targetZoom = 1;
 const ZOOM_MIN = 0.55, ZOOM_MAX = 3.8;
 
-// Vue banque <-> boutique (flèche à droite)
-let view = 'bank';                 // 'bank' | 'shop'
-let camBlend = 0;                  // 0 = banque, 1 = boutique
+// Vue banque <-> boutique / tir au but
+let view = 'bank';                 // 'bank' | 'shop' | 'penalty' | 'blackjack'
+let shopBlend = 0;                 // 0 = banque, 1 = boutique
+let penaltyBlend = 0;              // 0 = banque, 1 = tir au but
+let blackjackBlend = 0;            // 0 = banque, 1 = blackjack
 const bankPos = new THREE.Vector3(), bankLook = new THREE.Vector3();
 const shopCamPos = new THREE.Vector3(0.5, 0.4, 6.5);    // reste quasi sur place
 const shopCamLook = new THREE.Vector3(15, 0.9, 5);      // regarde à 90° vers la boutique
+const penaltyCamPos = new THREE.Vector3(-8.0, 0.05, 6);
+const penaltyCamLook = new THREE.Vector3(-19.15, -0.82, 6);
+const blackjackCamPos = new THREE.Vector3(0, 2.05, 6.2);
+const blackjackCamLook = new THREE.Vector3(0, -0.95, 13.5);
 const _look = new THREE.Vector3();
 
 let spin = 0, spinVel = 0, lastSpin = 0, spinAccum = 0;
@@ -709,7 +879,7 @@ function placeChat() {
   bellyScreen.getWorldQuaternion(_q);
   _n.set(0, 0, 1).applyQuaternion(_q).normalize();
   _toCam.copy(camera.position).sub(_wc).normalize();
-  const visible = (screenState !== 'off') && !dizzy && (_n.dot(_toCam) > 0.25);
+  const visible = view === 'bank' && (screenState !== 'off') && !dizzy && (_n.dot(_toCam) > 0.25);
   bellyChat.style.opacity = visible ? '1' : '0';
   bellyChat.style.pointerEvents = visible ? 'auto' : 'none';
   if (!visible) return;
@@ -783,7 +953,23 @@ function setRay(e) {
 }
 function hitPower(e) { setRay(e); return raycaster.intersectObject(powerBtn, true).length > 0; }
 function hitEyes(e) { setRay(e); return raycaster.intersectObjects([eyeL, eyeR], false).length > 0; }
+function getPenaltyTarget(e) {
+  setRay(e);
+  const hit = raycaster.intersectObject(goalTarget, false)[0];
+  if (!hit) return null;
+  penaltyGroup.worldToLocal(penaltyLocalTarget.copy(hit.point));
+  return new THREE.Vector3(
+    THREE.MathUtils.clamp(penaltyLocalTarget.x, -2.05, 2.05),
+    THREE.MathUtils.clamp(penaltyLocalTarget.y, -1.8, 0.05),
+    -4.02,
+  );
+}
 canvas.addEventListener('pointerdown', (e) => {
+  if (view === 'penalty') {
+    const target = getPenaltyTarget(e);
+    if (target) shootPenalty(target);
+    return;
+  }
   if (view !== 'bank') return;                   // pas d'interaction robot en vue boutique
   if (hitPower(e)) { togglePower(); return; }
   if (hitEyes(e)) { triggerAngry(); return; }    // clic sur un œil → fâché
@@ -796,11 +982,291 @@ window.addEventListener('pointermove', (e) => {
     spin += dx * 0.012; spinVel = dx * 0.012;
     return;
   }
+  if (view === 'penalty') {
+    canvas.style.cursor = getPenaltyTarget(e) && !penaltyShot ? 'crosshair' : 'default';
+    return;
+  }
   if (hitPower(e) || hitEyes(e)) canvas.style.cursor = 'pointer';
   else canvas.style.cursor = (screenState === 'off') ? 'grab' : 'default';
 });
 window.addEventListener('pointerup', () => { dragging = false; });
 canvas.style.cursor = 'default';
+
+// ---------- Mini-jeu tir au but ----------
+const penaltyPanel = document.getElementById('penalty-panel');
+const penaltyClose = document.getElementById('penalty-close');
+const penaltyScore = document.getElementById('penalty-score');
+const penaltyStatus = document.getElementById('penalty-status');
+const penaltyLocalTarget = new THREE.Vector3();
+
+function savePenaltyState() {
+  localStorage.setItem('techcorp-penalty-goals', String(penaltyGoals));
+  localStorage.setItem('techcorp-penalty-attempts', String(penaltyAttempts));
+}
+
+function renderPenaltyScore() {
+  penaltyScore.textContent = `${penaltyGoals} / ${penaltyAttempts}`;
+}
+
+function shootPenalty(target) {
+  if (penaltyShot) return;
+  const zones = [
+    { name: 'gauche', x: -1.35, min: -2.2, max: -0.72 },
+    { name: 'centre', x: 0, min: -0.72, max: 0.72 },
+    { name: 'droite', x: 1.35, min: 0.72, max: 2.2 },
+  ];
+  const shotZone = zones.find((zone) => target.x >= zone.min && target.x < zone.max) ?? zones[1];
+  const keeperZone = zones[Math.floor(Math.random() * zones.length)];
+  const scored = shotZone.name !== keeperZone.name;
+  penaltyAttempts += 1;
+  if (scored) penaltyGoals += 1;
+  savePenaltyState();
+  renderPenaltyScore();
+  penaltyStatus.textContent = scored
+    ? `But. Le gardien part ${keeperZone.name}.`
+    : `Arrêt. Le gardien couvre le ${keeperZone.name}.`;
+  penaltyShot = {
+    startTime: clock.getElapsedTime(),
+    target: target.clone(),
+    keeperX: keeperZone.x * 0.9,
+    scored,
+  };
+}
+
+function resetPenaltyShot() {
+  ballGroup.position.copy(penaltyStart);
+  ballGroup.rotation.set(0, 0, 0);
+  penaltyKeeper.position.x = 0;
+  penaltyKeeper.rotation.z = 0;
+  penaltyShot = null;
+  penaltyStatus.textContent = 'Clique dans la cage pour tirer.';
+}
+
+function updatePenaltyGame(t, dt) {
+  if (!penaltyShot) return;
+  const elapsed = t - penaltyShot.startTime;
+  const flight = THREE.MathUtils.clamp(elapsed / 0.82, 0, 1);
+  const e = easeInOutCubic(flight);
+  ballGroup.position.lerpVectors(penaltyStart, penaltyShot.target, e);
+  ballGroup.position.y += Math.sin(flight * Math.PI) * 0.85;
+  ballGroup.rotation.x -= dt * 13;
+  ballGroup.rotation.z += dt * 7;
+  const dive = THREE.MathUtils.clamp(elapsed / 0.55, 0, 1);
+  penaltyKeeper.position.x = THREE.MathUtils.lerp(0, penaltyShot.keeperX, easeInOutCubic(dive));
+  penaltyKeeper.rotation.z = THREE.MathUtils.lerp(0, -Math.sign(penaltyShot.keeperX) * 0.72, dive);
+  if (elapsed > 1.45) resetPenaltyShot();
+}
+
+renderPenaltyScore();
+penaltyClose.addEventListener('click', () => setView('bank'));
+
+// ---------- Mini-jeu blackjack ----------
+const blackjackPanel = document.getElementById('blackjack-panel');
+const blackjackClose = document.getElementById('blackjack-close');
+const dealerHandEl = document.getElementById('dealer-hand');
+const playerHandEl = document.getElementById('player-hand');
+const dealerScoreEl = document.getElementById('dealer-score');
+const playerScoreEl = document.getElementById('player-score');
+const blackjackStatus = document.getElementById('blackjack-status');
+const blackjackHit = document.getElementById('blackjack-hit');
+const blackjackStand = document.getElementById('blackjack-stand');
+const blackjackNew = document.getElementById('blackjack-new');
+const blackjackBalance = document.getElementById('blackjack-balance');
+const blackjackBet = document.getElementById('blackjack-bet');
+let blackjackDeck = [];
+let dealerCards = [];
+let playerCards = [];
+let dealerHidden = true;
+let blackjackRoundOver = true;
+let activeBlackjackBet = 0;
+
+function makeDeck() {
+  const suits = ['S', 'H', 'D', 'C'];
+  const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  const deck = [];
+  suits.forEach((suit) => ranks.forEach((rank) => deck.push({ rank, suit })));
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
+
+function cardValue(card) {
+  if (card.rank === 'A') return 11;
+  if (['J', 'Q', 'K'].includes(card.rank)) return 10;
+  return Number(card.rank);
+}
+
+function handValue(cards) {
+  let total = cards.reduce((sum, card) => sum + cardValue(card), 0);
+  let aces = cards.filter((card) => card.rank === 'A').length;
+  while (total > 21 && aces > 0) {
+    total -= 10;
+    aces -= 1;
+  }
+  return total;
+}
+
+function drawCard() {
+  if (blackjackDeck.length < 8) blackjackDeck = makeDeck();
+  return blackjackDeck.pop();
+}
+
+function cardMarkup(card, hidden = false) {
+  if (hidden) return '<div class="playing-card hidden-card"></div>';
+  const red = card.suit === 'H' || card.suit === 'D';
+  const robot = ['J', 'Q', 'K'].includes(card.rank) ? '<div class="robot-face"></div>' : `<div></div>`;
+  return `
+    <div class="playing-card ${red ? 'red' : ''}">
+      <div class="card-rank">${card.rank}</div>
+      ${robot}
+      <div class="card-suit">${card.suit}</div>
+    </div>
+  `;
+}
+
+function makeCardTexture(card, hidden = false) {
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 360;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = hidden ? '#10213c' : '#fffaf0';
+  ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = hidden ? '#6aa0ff' : '#d8caa8';
+  ctx.strokeRect(5, 5, cv.width - 10, cv.height - 10);
+  if (hidden) {
+    ctx.strokeStyle = '#1d3760';
+    ctx.lineWidth = 12;
+    for (let x = -260; x < 420; x += 34) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 360, 360); ctx.stroke();
+    }
+  } else {
+    const red = card.suit === 'H' || card.suit === 'D';
+    ctx.fillStyle = red ? '#b0202f' : '#151515';
+    ctx.font = 'bold 58px Georgia, serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(card.rank, 22, 18);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    ctx.fillText(card.suit, 234, 338);
+    if (['J', 'Q', 'K'].includes(card.rank)) {
+      ctx.fillStyle = '#9fb4cf';
+      ctx.strokeStyle = '#1d2634';
+      ctx.lineWidth = 10;
+      ctx.beginPath(); ctx.roundRect(70, 118, 116, 94, 22); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#38e1d6';
+      ctx.shadowColor = '#38e1d6'; ctx.shadowBlur = 16;
+      ctx.beginPath(); ctx.arc(104, 164, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(152, 164, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#1d2634';
+      ctx.fillRect(112, 190, 32, 6);
+    } else {
+      ctx.font = 'bold 96px Georgia, serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(card.suit, 128, 182);
+    }
+  }
+  const texture = new THREE.CanvasTexture(cv);
+  texture.anisotropy = 4;
+  return texture;
+}
+
+function renderCards3D(group, cards, hideSecond) {
+  group.clear();
+  const spacing = 0.82;
+  const start = -(cards.length - 1) * spacing * 0.5;
+  cards.forEach((card, index) => {
+    const hidden = hideSecond && index === 1;
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.72, 1.02),
+      new THREE.MeshBasicMaterial({ map: makeCardTexture(card, hidden), side: THREE.DoubleSide })
+    );
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.rotation.z = (index - cards.length / 2) * 0.035;
+    mesh.position.set(start + index * spacing, 0.02 + index * 0.004, 0);
+    group.add(mesh);
+  });
+}
+
+function renderBlackjack() {
+  dealerHandEl.innerHTML = dealerCards
+    .map((card, index) => cardMarkup(card, dealerHidden && index === 1))
+    .join('');
+  playerHandEl.innerHTML = playerCards.map((card) => cardMarkup(card)).join('');
+  dealerScoreEl.textContent = dealerCards.length
+    ? dealerHidden ? String(cardValue(dealerCards[0])) : String(handValue(dealerCards))
+    : '0';
+  playerScoreEl.textContent = String(handValue(playerCards));
+  blackjackHit.disabled = blackjackRoundOver;
+  blackjackStand.disabled = blackjackRoundOver;
+  blackjackNew.disabled = false;
+  blackjackBet.disabled = !blackjackRoundOver;
+  blackjackBalance.textContent = '$' + money;
+  renderCards3D(bjDealerCards3D, dealerCards, dealerHidden);
+  renderCards3D(bjPlayerCards3D, playerCards, false);
+}
+
+function finishBlackjack(message, payout = 0) {
+  blackjackRoundOver = true;
+  dealerHidden = false;
+  if (payout > 0) awardMoney(payout);
+  activeBlackjackBet = 0;
+  blackjackStatus.textContent = message + (payout > 0 ? ` Gain: $${payout}.` : '');
+  renderBlackjack();
+}
+
+function newBlackjackRound() {
+  if (!blackjackRoundOver) return;
+  const bet = Math.max(1, Math.floor(Number(blackjackBet.value) || 1));
+  blackjackBet.value = String(bet);
+  if (bet > money) {
+    blackjackStatus.textContent = "Solde insuffisant pour cette mise.";
+    renderBlackjack();
+    return;
+  }
+  activeBlackjackBet = bet;
+  awardMoney(-bet);
+  blackjackDeck = blackjackDeck.length ? blackjackDeck : makeDeck();
+  dealerCards = [drawCard(), drawCard()];
+  playerCards = [drawCard(), drawCard()];
+  dealerHidden = true;
+  blackjackRoundOver = false;
+  blackjackStatus.textContent = `Mise: $${activeBlackjackBet}. Carte ou rester.`;
+  const playerTotal = handValue(playerCards);
+  const dealerTotal = handValue(dealerCards);
+  if (playerTotal === 21 && dealerTotal === 21) finishBlackjack('Égalité. Deux blackjacks.', activeBlackjackBet);
+  else if (playerTotal === 21) finishBlackjack('Blackjack. Tu gagnes.', Math.ceil(activeBlackjackBet * 2.5));
+  else if (dealerTotal === 21) finishBlackjack('Blackjack de la banque.');
+  else renderBlackjack();
+}
+
+function playerHit() {
+  if (blackjackRoundOver) return;
+  playerCards.push(drawCard());
+  const total = handValue(playerCards);
+  if (total > 21) finishBlackjack('Tu dépasses 21. Banque gagnante.');
+  else {
+    blackjackStatus.textContent = total === 21 ? '21. Tu peux rester.' : 'Carte ou rester.';
+    renderBlackjack();
+  }
+}
+
+function dealerPlay() {
+  if (blackjackRoundOver) return;
+  dealerHidden = false;
+  while (handValue(dealerCards) < 17) dealerCards.push(drawCard());
+  const playerTotal = handValue(playerCards);
+  const dealerTotal = handValue(dealerCards);
+  if (dealerTotal > 21) finishBlackjack('La banque dépasse 21. Tu gagnes.', activeBlackjackBet * 2);
+  else if (dealerTotal > playerTotal) finishBlackjack('Banque gagnante.');
+  else if (dealerTotal < playerTotal) finishBlackjack('Tu gagnes.', activeBlackjackBet * 2);
+  else finishBlackjack('Égalité.', activeBlackjackBet);
+}
+
+blackjackClose.addEventListener('click', () => setView('bank'));
+blackjackHit.addEventListener('click', playerHit);
+blackjackStand.addEventListener('click', dealerPlay);
+blackjackNew.addEventListener('click', newBlackjackRound);
 
 setScreen('off');
 
@@ -826,16 +1292,35 @@ function tick() {
     bankPos.copy(camEndTarget).addScaledVector(baseOffset, zoom);
     bankLook.copy(camEndTarget);
   }
-  // Transition vers la boutique (la scène pivote, le robot sort du champ)
-  camBlend += ((view === 'shop' ? 1 : 0) - camBlend) * Math.min(dt * 2.4, 1);
-  const cb = easeInOutCubic(THREE.MathUtils.clamp(camBlend, 0, 1));
-  camera.position.lerpVectors(bankPos, shopCamPos, cb);
-  _look.lerpVectors(bankLook, shopCamLook, cb);
+  // Transition vers les zones latérales
+  shopBlend += ((view === 'shop' ? 1 : 0) - shopBlend) * Math.min(dt * 2.4, 1);
+  penaltyBlend += ((view === 'penalty' ? 1 : 0) - penaltyBlend) * Math.min(dt * 2.4, 1);
+  blackjackBlend += ((view === 'blackjack' ? 1 : 0) - blackjackBlend) * Math.min(dt * 2.4, 1);
+  const sb = easeInOutCubic(THREE.MathUtils.clamp(shopBlend, 0, 1));
+  const pb = easeInOutCubic(THREE.MathUtils.clamp(penaltyBlend, 0, 1));
+  const bb = easeInOutCubic(THREE.MathUtils.clamp(blackjackBlend, 0, 1));
+  camera.position.copy(bankPos);
+  _look.copy(bankLook);
+  camera.position.lerp(shopCamPos, sb);
+  _look.lerp(shopCamLook, sb);
+  camera.position.lerp(penaltyCamPos, pb);
+  _look.lerp(penaltyCamLook, pb);
+  camera.position.lerp(blackjackCamPos, bb);
+  _look.lerp(blackjackCamLook, bb);
   camera.lookAt(_look);
-  shopGroup.visible = camBlend > 0.004;
+  shopGroup.visible = shopBlend > 0.004;
+  penaltyGroup.visible = penaltyBlend > 0.004;
+  blackjackGroup.visible = blackjackBlend > 0.004;
   if (shopGroup.visible) {
     keeperArm.rotation.z = 1.85 + Math.sin(t * 2.5) * 0.06;  // pointe en bougeant un peu
   }
+  if (penaltyGroup.visible) {
+    penaltyKeeper.rotation.z = Math.sin(t * 2.2) * 0.025;
+  }
+  if (blackjackGroup.visible) {
+    bjDealer.rotation.y = Math.sin(t * 1.4) * 0.035;
+  }
+  updatePenaltyGame(t, dt);
   moustacheRobots.forEach(({ group, moustache }, i) => {
     group.position.y = Math.sin(t * 1.6 + i) * 0.025;
     moustache.rotation.z = Math.sin(t * 3 + i) * 0.045;
@@ -1097,6 +1582,7 @@ function showCoinPop() {
 
 function renderShop() {
   walletBalance.textContent = '$' + money;
+  blackjackBalance.textContent = '$' + money;
   cosmeticButtons.forEach((button) => {
     const name = button.dataset.buy;
     const item = cosmeticCatalog[name];
@@ -1141,18 +1627,65 @@ cosmeticButtons.forEach((button) => button.addEventListener('click', () => buyOr
 if (equipped !== 'none' && !owned.has(equipped)) equipped = 'none';
 applyCosmetic();
 renderShop();
+renderBlackjack();
 
-// Navigation banque <-> boutique
+// Navigation banque <-> boutique / tir au but
 const toShop = document.getElementById('to-shop');
+const toPenalty = document.getElementById('to-penalty');
+const toBlackjack = document.getElementById('to-blackjack');
 const toBank = document.getElementById('to-bank');
+
+const navButtons = {
+  bank: toBank,
+  shop: toShop,
+  penalty: toPenalty,
+  blackjack: toBlackjack,
+};
+const navByView = {
+  bank: [
+    { target: 'penalty', direction: 'west' },
+    { target: 'shop', direction: 'east' },
+  ],
+  penalty: [
+    { target: 'bank', direction: 'north' },
+    { target: 'blackjack', direction: 'south' },
+  ],
+  shop: [
+    { target: 'bank', direction: 'north' },
+    { target: 'blackjack', direction: 'south' },
+  ],
+  blackjack: [
+    { target: 'penalty', direction: 'west' },
+    { target: 'shop', direction: 'east' },
+  ],
+};
+
+function updateNavigation(v) {
+  Object.values(navButtons).forEach((button) => {
+    button.classList.add('hidden');
+    button.classList.remove('nav-north', 'nav-east', 'nav-south', 'nav-west');
+  });
+  navByView[v].forEach(({ target, direction }) => {
+    const button = navButtons[target];
+    button.classList.remove('hidden');
+    button.classList.add('nav-' + direction);
+  });
+}
+
 function setView(v) {
   view = v;
-  toShop.classList.toggle('hidden', v !== 'bank');
-  toBank.classList.toggle('hidden', v !== 'shop');
+  updateNavigation(v);
   shopBtn.classList.toggle('hidden', v !== 'bank');
+  penaltyPanel.classList.toggle('hidden', v !== 'penalty');
+  blackjackPanel.classList.toggle('hidden', v !== 'blackjack');
   if (v === 'shop') shopPanel.classList.remove('hidden');   // panneau d'équipement ouvert dans la boutique
   else shopPanel.classList.add('hidden');
 }
 toShop.addEventListener('click', () => setView('shop'));
+toPenalty.addEventListener('click', () => setView('penalty'));
+toBlackjack.addEventListener('click', () => setView('blackjack'));
 toBank.addEventListener('click', () => setView('bank'));
+setView('bank');
 if (location.hash === '#test-shop') setView('shop');
+if (location.hash === '#test-penalty') setView('penalty');
+if (location.hash === '#test-blackjack') setView('blackjack');
