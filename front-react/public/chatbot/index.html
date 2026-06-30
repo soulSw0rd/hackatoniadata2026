@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TechCorp · Assistant Financier</title>
+<style>
+  :root {
+    --bg-0: #070b14;
+    --bg-1: #0d1626;
+    --accent: #38e1d6;
+    --accent-2: #6aa0ff;
+    --ink: #e7f0ff;
+    --muted: #7e8aa3;
+    --panel: rgba(8, 14, 26, 0.82);
+    --ok: #43e08a;
+    --off: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: #ece4d2;
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  #scene { position: fixed; inset: 0; display: block; }
+
+  .brand {
+    position: fixed; top: 22px; left: 26px; z-index: 5;
+    letter-spacing: .14em; font-size: 13px; text-transform: uppercase;
+    color: #8a7748;
+  }
+  .brand b { color: #2a2418; font-weight: 700; }
+  .hint {
+    position: fixed; bottom: 18px; left: 0; right: 0; z-index: 5;
+    text-align: center; font-size: 12px; color: #6f6038;
+  }
+
+  /* ---- Chat panel projeté sur le ventre du robot ---- */
+  #belly-chat {
+    position: fixed; z-index: 4;
+    display: flex; flex-direction: column;
+    background: var(--panel);
+    border: 1px solid rgba(56, 225, 214, 0.35);
+    border-radius: 14px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.4), 0 18px 50px rgba(0,0,0,.55),
+                inset 0 0 28px rgba(56,225,214,.08);
+    backdrop-filter: blur(6px);
+    overflow: hidden;
+    transform: translate(-50%, -50%);
+    transition: opacity .25s ease;
+    pointer-events: auto;
+  }
+  #belly-chat.hidden { opacity: 0; pointer-events: none; }
+
+  .chat-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    background: linear-gradient(90deg, rgba(56,225,214,.16), rgba(106,160,255,.10));
+    border-bottom: 1px solid rgba(56,225,214,.22);
+    font-size: 12px; font-weight: 600; letter-spacing: .02em;
+  }
+  .chat-head .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--off); box-shadow: 0 0 10px var(--off);
+  }
+  .chat-head.online .dot { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+  .chat-head .status { margin-left: auto; font-size: 10px; color: var(--muted); font-weight: 500; }
+
+  .chat-log {
+    flex: 1; min-height: 0; overflow-y: auto;
+    padding: 10px; display: flex; flex-direction: column; gap: 8px;
+    font-size: 12px; line-height: 1.4;
+  }
+  .chat-log::-webkit-scrollbar { width: 6px; }
+  .chat-log::-webkit-scrollbar-thumb { background: rgba(56,225,214,.25); border-radius: 3px; }
+  .msg { max-width: 85%; padding: 7px 10px; border-radius: 10px; }
+  .msg.bot  { align-self: flex-start; background: rgba(106,160,255,.14); border:1px solid rgba(106,160,255,.25); }
+  .msg.user { align-self: flex-end;  background: rgba(56,225,214,.16);  border:1px solid rgba(56,225,214,.3); }
+
+  .chat-input {
+    display: flex; gap: 6px; padding: 8px; border-top: 1px solid rgba(56,225,214,.18);
+  }
+  .chat-input input {
+    flex: 1; min-width: 0; background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.12); border-radius: 8px;
+    color: var(--ink); padding: 7px 9px; font-size: 12px; outline: none;
+  }
+  .chat-input input:focus { border-color: var(--accent); }
+  .chat-input button {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border: none; border-radius: 8px; color: #05131a; font-weight: 700;
+    padding: 0 12px; cursor: pointer; font-size: 12px;
+  }
+  .chat-input button:active { transform: translateY(1px); }
+
+  /* ---- Démarrage / écran ---- */
+  #chat-ui { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  #boot {
+    position: relative; flex: 1; min-height: 0;
+    display: none; flex-direction: column; justify-content: center; gap: 4px;
+    padding: 14px 18px; overflow: hidden;
+    background: #02080d;
+    font-family: "Consolas", "Courier New", monospace; font-size: 12px;
+    color: #43e08a; text-shadow: 0 0 6px rgba(67, 224, 138, .7);
+  }
+  #boot::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(rgba(67,224,138,.06) 0 2px, transparent 2px 4px);
+    animation: scan 5s linear infinite;
+  }
+  .boot-line { opacity: 0; animation: bootIn .25s ease forwards; }
+  @keyframes bootIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+  @keyframes scan { from { background-position-y: 0; } to { background-position-y: 120px; } }
+
+  /* ---- Boutique cosmétique ---- */
+  #shop-btn {
+    position: fixed; top: 20px; right: 24px; z-index: 6;
+    background: linear-gradient(135deg, #e7b53a, #b8862a);
+    color: #2a2010; border: none; border-radius: 10px;
+    padding: 9px 14px; font-weight: 700; font-size: 13px; cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,.18);
+  }
+  #shop-btn:active { transform: translateY(1px); }
+  #shop-panel {
+    position: fixed; top: 64px; right: 24px; z-index: 6; width: 290px;
+    background: #fffaf0; color: #2a2418;
+    border: 1px solid #e7b53a; border-radius: 14px;
+    box-shadow: 0 18px 50px rgba(0,0,0,.25); overflow: hidden;
+  }
+  #shop-panel.hidden { display: none; }
+  .shop-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; font-weight: 700; font-size: 14px;
+    background: linear-gradient(90deg, rgba(231,181,58,.28), rgba(176,32,47,.14));
+    border-bottom: 1px solid #ecd9a6;
+  }
+  #shop-close { cursor: pointer; opacity: .55; font-weight: 400; }
+  #shop-close:hover { opacity: 1; }
+  .shop-item { display: flex; align-items: center; gap: 12px; padding: 14px; }
+  .shop-ico { font-size: 38px; line-height: 1; }
+  .shop-info { flex: 1; }
+  .shop-name { font-weight: 600; }
+  .shop-price { font-size: 12px; color: #2e9c5a; font-weight: 700; }
+  .shop-buy {
+    background: #b0202f; color: #fff; border: none; border-radius: 8px;
+    padding: 8px 12px; font-weight: 700; cursor: pointer; font-size: 12px;
+  }
+  .shop-buy.equipped { background: #2e9c5a; }
+</style>
+</head>
+<body>
+  <div class="brand"><b>TechCorp</b> · Assistant Financier</div>
+  <canvas id="scene"></canvas>
+
+  <!-- Interface chatbot logée dans le ventre du robot.
+       L'UI est prête ; la connexion au serveur d'inférence sera ajoutée plus tard
+       (voir la fonction sendToModel() dans le script). -->
+  <div id="belly-chat" class="hidden">
+    <!-- Séquence de démarrage (CRT) -->
+    <div id="boot"></div>
+    <!-- Interface chat (affichée une fois l'écran allumé) -->
+    <div id="chat-ui">
+      <div class="chat-head" id="chat-head">
+        <span class="dot"></span> Phi-3.5 Financial
+        <span class="status" id="chat-status">Hors-ligne · API non connectée</span>
+      </div>
+      <div class="chat-log" id="chat-log">
+        <div class="msg bot">Bonjour 👋 Je suis l'assistant financier de TechCorp. Posez-moi une question. <em>(démo — modèle non encore branché)</em></div>
+      </div>
+      <div class="chat-input">
+        <input id="chat-text" type="text" placeholder="Votre question…" autocomplete="off" />
+        <button id="chat-send">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="hint">Bouton ⏻ : allumer / éteindre · une fois <b>éteint</b> : molette pour zoomer, glisser pour le faire tourner (5 tours = surprise 🌟)</div>
+
+  <!-- Boutique cosmétique -->
+  <button id="shop-btn">🤠 Boutique</button>
+  <div id="shop-panel" class="hidden">
+    <div class="shop-head">Boutique cosmétique <span id="shop-close">✕</span></div>
+    <div class="shop-item">
+      <div class="shop-ico">🤠</div>
+      <div class="shop-info">
+        <div class="shop-name">Chapeau de cowboy</div>
+        <div class="shop-price">Gratuit</div>
+      </div>
+      <button id="hat-toggle" class="shop-buy">Équiper</button>
+    </div>
+    <div class="shop-item">
+      <div class="shop-ico">🎡</div>
+      <div class="shop-info">
+        <div class="shop-name">Casquette à hélice</div>
+        <div class="shop-price">Gratuit</div>
+      </div>
+      <button id="prop-toggle" class="shop-buy">Équiper</button>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+    // ---------- Renderer / scene / camera ----------
+    const canvas = document.getElementById('scene');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xe9e1cd);
+    scene.fog = new THREE.Fog(0xe9e1cd, 18, 46);
+
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 1.4, 10.5);
+
+    // ---------- Intro: zoom d'ouverture vers le ventre ----------
+    const camStartPos = new THREE.Vector3(0, 1.4, 10.5);   // plan large (robot entier)
+    const camEndPos = new THREE.Vector3(0, -0.18, 4.15);   // gros plan sur le ventre
+    const camStartTarget = new THREE.Vector3(0, 0.6, 0);
+    const camEndTarget = new THREE.Vector3(0, -0.28, 0.2);
+    const camTarget = new THREE.Vector3();
+    const INTRO_DUR = 2.8;
+    let introT = 0;
+    const easeInOutCubic = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+
+    // ---------- Lights ----------
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    scene.add(new THREE.HemisphereLight(0xfff4dc, 0x9a8c70, 0.9));
+    const key = new THREE.DirectionalLight(0xfff3e0, 1.25);
+    key.position.set(5, 8, 6);
+    scene.add(key);
+    const fill = new THREE.DirectionalLight(0xcfe0ff, 0.5);
+    fill.position.set(-6, 3, 4);
+    scene.add(fill);
+    const rimTeal = new THREE.PointLight(0x38e1d6, 0.6, 30);
+    rimTeal.position.set(-5, 2, 3);
+    scene.add(rimTeal);
+
+    // ---------- Materials ----------
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x9fb4cf, metalness: 0.85, roughness: 0.35 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x24304a, metalness: 0.7, roughness: 0.4 });
+    const accentMat = new THREE.MeshStandardMaterial({ color: 0x38e1d6, emissive: 0x38e1d6, emissiveIntensity: 1.4, metalness: 0.3, roughness: 0.4 });
+    const screenMat = new THREE.MeshStandardMaterial({ color: 0x06121f, emissive: 0x0a2a3a, emissiveIntensity: 0.12, metalness: 0.2, roughness: 0.25 });
+    const bezelMat = new THREE.MeshStandardMaterial({ color: 0x38e1d6, emissive: 0x38e1d6, emissiveIntensity: 0.25, metalness: 0.3, roughness: 0.4 });
+    const powerBtnMat = new THREE.MeshStandardMaterial({ color: 0xff5555, emissive: 0xff2222, emissiveIntensity: 1.2, metalness: 0.3, roughness: 0.4 });
+    const icoMat = new THREE.MeshStandardMaterial({ color: 0x04121a, roughness: 0.6 });
+
+    // ---------- Robot ----------
+    const robot = new THREE.Group();
+    scene.add(robot);
+
+    function roundBox(w, h, d, mat, r = 0.12) {
+      return new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 6, r), mat);
+    }
+
+    // Torso (élargi pour laisser de la place au grand écran-ventre)
+    const torso = roundBox(2.35, 2.55, 1.12, bodyMat, 0.26);
+    robot.add(torso);
+
+    // Belly screen (le "ventre" qui contient le chatbot) — agrandi
+    const SCREEN_W = 1.85, SCREEN_H = 1.7;
+    const bellyScreen = new THREE.Mesh(new RoundedBoxGeometry(SCREEN_W, SCREEN_H, 0.06, 5, 0.06), screenMat);
+    bellyScreen.position.set(0, -0.1, 0.57);
+    torso.add(bellyScreen);
+    // Liseré lumineux autour de l'écran
+    const bezel = new THREE.Mesh(
+      new RoundedBoxGeometry(SCREEN_W + 0.14, SCREEN_H + 0.14, 0.04, 5, 0.08),
+      bezelMat
+    );
+    bezel.position.set(0, -0.1, 0.53);
+    torso.add(bezel);
+
+    // Anchors used to project the belly screen onto the 2D chat panel
+    const aCenter = new THREE.Object3D(); aCenter.position.set(0, 0, 0.05); bellyScreen.add(aCenter);
+    const aLeft = new THREE.Object3D(); aLeft.position.set(-SCREEN_W / 2, 0, 0.05); bellyScreen.add(aLeft);
+    const aRight = new THREE.Object3D(); aRight.position.set(SCREEN_W / 2, 0, 0.05); bellyScreen.add(aRight);
+
+    // Bouton power physique sur le ventre (en bas à droite de l'écran)
+    const powerBtn = new THREE.Group();
+    const btnBase = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.21, 0.12, 28), darkMat);
+    btnBase.rotation.x = Math.PI / 2; powerBtn.add(btnBase);
+    const btnCap = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.1, 28), powerBtnMat);
+    btnCap.rotation.x = Math.PI / 2; btnCap.position.z = 0.05; powerBtn.add(btnCap);
+    // Pictogramme power ⏻ (anneau ouvert + barre verticale)
+    const icoRing = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.018, 10, 28, Math.PI * 1.55), icoMat);
+    icoRing.position.z = 0.105; icoRing.rotation.z = Math.PI * 0.72; powerBtn.add(icoRing);
+    const icoBar = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.09, 0.02), icoMat);
+    icoBar.position.set(0, 0.015, 0.11); powerBtn.add(icoBar);
+    powerBtn.position.set(0.92, -1.02, 0.5);
+    torso.add(powerBtn);
+
+    // Head
+    const head = new THREE.Group();
+    head.position.set(0, 1.95, 0);
+    robot.add(head);
+    const skull = roundBox(1.5, 1.15, 1.1, bodyMat, 0.28);
+    head.add(skull);
+    // Visor
+    const visor = new THREE.Mesh(new RoundedBoxGeometry(1.2, 0.5, 0.12, 5, 0.1), darkMat);
+    visor.position.set(0, 0.05, 0.52);
+    head.add(visor);
+    // Eyes
+    const eyeGeo = new THREE.SphereGeometry(0.12, 24, 24);
+    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x38e1d6, emissive: 0x38e1d6, emissiveIntensity: 1.4, metalness: 0.3, roughness: 0.4 });
+    const eyeL = new THREE.Mesh(eyeGeo, eyeMat); eyeL.position.set(-0.3, 0.06, 0.62); head.add(eyeL);
+    const eyeR = new THREE.Mesh(eyeGeo, eyeMat); eyeR.position.set(0.3, 0.06, 0.62); head.add(eyeR);
+    // Sourcils froncés (visibles seulement quand le robot est fâché)
+    const browMat = new THREE.MeshStandardMaterial({ color: 0x0a1420, roughness: 0.6 });
+    const browGeo = new THREE.BoxGeometry(0.34, 0.07, 0.07);
+    const browL = new THREE.Mesh(browGeo, browMat); browL.position.set(-0.3, 0.33, 0.6); browL.rotation.z = -0.4; browL.visible = false; head.add(browL);
+    const browR = new THREE.Mesh(browGeo, browMat); browR.position.set(0.3, 0.33, 0.6); browR.rotation.z = 0.4; browR.visible = false; head.add(browR);
+    // Antenna
+    const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 12), darkMat);
+    antenna.position.set(0, 0.85, 0); head.add(antenna);
+    const antBall = new THREE.Mesh(new THREE.SphereGeometry(0.1, 20, 20), accentMat);
+    antBall.position.set(0, 1.12, 0); head.add(antBall);
+
+    // Chapeau de cowboy (cosmétique — caché par défaut)
+    const cowboyHat = new THREE.Group();
+    const hatMat = new THREE.MeshStandardMaterial({ color: 0x7a4a22, roughness: 0.78, metalness: 0.08 });
+    const hatBandMat = new THREE.MeshStandardMaterial({ color: 0x2e1d10, roughness: 0.6 });
+    cowboyHat.add(new THREE.Mesh(new THREE.CylinderGeometry(1.12, 1.12, 0.07, 36), hatMat));     // bord plat
+    const brimRoll = new THREE.Mesh(new THREE.TorusGeometry(1.06, 0.1, 10, 36), hatMat);          // bord roulé
+    brimRoll.rotation.x = Math.PI / 2; brimRoll.position.y = 0.06; cowboyHat.add(brimRoll);
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.64, 0.7, 36), hatMat);        // calotte
+    crown.position.y = 0.42; cowboyHat.add(crown);
+    const crownTop = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 0.05, 36), hatMat);
+    crownTop.position.y = 0.78; cowboyHat.add(crownTop);
+    const hatBand = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.66, 0.13, 36), hatBandMat); // bandeau
+    hatBand.position.y = 0.12; cowboyHat.add(hatBand);
+    cowboyHat.position.set(0, 0.6, 0);
+    cowboyHat.visible = false;
+    head.add(cowboyHat);
+
+    // Casquette à hélice multicolore (cosmétique — caché par défaut)
+    const propBeanie = new THREE.Group();
+    const beanieColors = [0xe4322b, 0xf2b50a, 0x2e9c5a, 0x2f7bd6, 0x8e44ad, 0xe9690a];
+    const GORES = 6;
+    for (let i = 0; i < GORES; i++) {
+      const gore = new THREE.Mesh(
+        new THREE.SphereGeometry(0.6, 6, 8, i * 2 * Math.PI / GORES, 2 * Math.PI / GORES, 0, Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: beanieColors[i], roughness: 0.55 })
+      );
+      propBeanie.add(gore);
+    }
+    const beanieRim = new THREE.Mesh(new THREE.TorusGeometry(0.58, 0.06, 10, 28),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }));
+    beanieRim.rotation.x = Math.PI / 2; propBeanie.add(beanieRim);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.2, 10),
+      new THREE.MeshStandardMaterial({ color: 0x222222 }));
+    mast.position.y = 0.68; propBeanie.add(mast);
+    // hélice (3 pales colorées qui tournent)
+    const propeller = new THREE.Group();
+    propeller.add(new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 12),
+      new THREE.MeshStandardMaterial({ color: 0x333333 })));
+    const bladeColors = [0xe4322b, 0xf2b50a, 0x2f7bd6];
+    for (let i = 0; i < 3; i++) {
+      const pivot = new THREE.Group();
+      pivot.rotation.y = i * 2 * Math.PI / 3;
+      const blade = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.03, 0.14),
+        new THREE.MeshStandardMaterial({ color: bladeColors[i], roughness: 0.5 }));
+      blade.position.set(0.24, 0, 0); pivot.add(blade); propeller.add(pivot);
+    }
+    propeller.position.y = 0.8; propBeanie.add(propeller);
+    propBeanie.position.set(0, 0.55, 0);
+    propBeanie.visible = false;
+    head.add(propBeanie);
+    // Ears / side caps
+    for (const sx of [-1, 1]) {
+      const ear = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.18, 20), darkMat);
+      ear.rotation.z = Math.PI / 2; ear.position.set(sx * 0.78, 0.05, 0); head.add(ear);
+    }
+
+    // Étoiles de "vertige" — cachées par défaut, tournent au-dessus de la tête
+    function makeStarShape() {
+      const s = new THREE.Shape();
+      const spikes = 5, outer = 0.15, inner = 0.06;
+      for (let i = 0; i < spikes * 2; i++) {
+        const r = (i % 2 === 0) ? outer : inner;
+        const a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2;
+        const x = Math.cos(a) * r, y = Math.sin(a) * r;
+        i === 0 ? s.moveTo(x, y) : s.lineTo(x, y);
+      }
+      s.closePath();
+      return s;
+    }
+    const starGeo = new THREE.ExtrudeGeometry(makeStarShape(), { depth: 0.04, bevelEnabled: false });
+    const starMat = new THREE.MeshStandardMaterial({ color: 0xffe14d, emissive: 0xffcc22, emissiveIntensity: 1.5, metalness: 0.2, roughness: 0.4 });
+    const stars = new THREE.Group();
+    const STAR_COUNT = 6;
+    for (let i = 0; i < STAR_COUNT; i++) {
+      const st = new THREE.Mesh(starGeo, starMat);
+      const a = (i / STAR_COUNT) * Math.PI * 2;
+      st.position.set(Math.cos(a) * 0.72, Math.sin(a * 2) * 0.06, Math.sin(a) * 0.72);
+      stars.add(st);
+    }
+    stars.position.set(0, 1.2, 0);   // au-dessus de la tête
+    stars.visible = false;
+    head.add(stars);
+
+    // Arms (floating segments)
+    const arms = [];
+    for (const sx of [-1, 1]) {
+      const arm = new THREE.Group();
+      arm.position.set(sx * 1.5, 0.55, 0.1);
+      const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.22, 20, 20), darkMat);
+      arm.add(shoulder);
+      const forearm = roundBox(0.34, 0.95, 0.34, bodyMat, 0.14);
+      forearm.position.set(sx * 0.12, -0.7, 0); arm.add(forearm);
+      const hand = new THREE.Mesh(new THREE.SphereGeometry(0.2, 20, 20), accentMat);
+      hand.position.set(sx * 0.12, -1.2, 0); arm.add(hand);
+      robot.add(arm); arms.push({ arm, sx, hand });
+    }
+
+    // Hover base glow
+    const halo = new THREE.Mesh(
+      new THREE.CircleGeometry(1.4, 48),
+      new THREE.MeshBasicMaterial({ color: 0x38e1d6, transparent: true, opacity: 0.12 })
+    );
+    halo.rotation.x = -Math.PI / 2;
+    halo.position.y = -2.0;
+    robot.add(halo);
+
+    // ====================== DÉCOR : intérieur de banque ======================
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xe7b53a, emissive: 0x6a4e00, emissiveIntensity: 0.4, metalness: 0.9, roughness: 0.25 });
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0xefe9da, metalness: 0.15, roughness: 0.3 });
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0xf1e9d6, metalness: 0.05, roughness: 0.9 });
+    const counterMat = new THREE.MeshStandardMaterial({ color: 0xf5f0e6, metalness: 0.1, roughness: 0.45 });
+    const redMat = new THREE.MeshStandardMaterial({ color: 0xb0202f, metalness: 0.15, roughness: 0.55 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0xbfe6ef, transparent: true, opacity: 0.18, metalness: 0.1, roughness: 0.1 });
+
+    // Sol : grand carrelage en damier (texture canvas)
+    const tileCv = document.createElement('canvas'); tileCv.width = tileCv.height = 256;
+    const tctx = tileCv.getContext('2d');
+    tctx.fillStyle = '#efe9da'; tctx.fillRect(0, 0, 256, 256);          // carreau clair
+    tctx.fillStyle = '#d9cdb0';                                         // carreau foncé (damier)
+    tctx.fillRect(0, 0, 128, 128); tctx.fillRect(128, 128, 128, 128);
+    tctx.strokeStyle = 'rgba(190,150,60,0.55)'; tctx.lineWidth = 6;     // joints dorés
+    tctx.strokeRect(0, 0, 128, 128); tctx.strokeRect(128, 0, 128, 128);
+    tctx.strokeRect(0, 128, 128, 128); tctx.strokeRect(128, 128, 128, 128);
+    const tileTex = new THREE.CanvasTexture(tileCv);
+    tileTex.wrapS = tileTex.wrapT = THREE.RepeatWrapping;
+    tileTex.repeat.set(10, 8);                                          // gros carreaux
+    tileTex.anisotropy = 8;
+    floorMat.map = tileTex;
+    floorMat.color.set(0xffffff);                                       // laisse la texture parler
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 40), floorMat);
+    floor.rotation.x = -Math.PI / 2; floor.position.y = -2.0; scene.add(floor);
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(40, 18), wallMat);
+    wall.position.set(0, 5, -6.5); scene.add(wall);
+    const trim = new THREE.Mesh(new THREE.BoxGeometry(40, 0.25, 0.25), goldMat);
+    trim.position.set(0, 0.2, -6.35); scene.add(trim);
+    for (const cx of [-11, 11]) {
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 13, 20), wallMat);
+      col.position.set(cx, 0.5, -6.2); scene.add(col);
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.4, 20), goldMat);
+      cap.position.set(cx, 6.2, -6.2); scene.add(cap);
+      const baseCol = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.4, 20), goldMat);
+      baseCol.position.set(cx, -1.8, -6.2); scene.add(baseCol);
+    }
+    const goldLight = new THREE.PointLight(0xffcf6a, 0.7, 28);
+    goldLight.position.set(0, 3.5, -3.2); scene.add(goldLight);
+
+    // Tapis rouge central (avec liserés dorés)
+    const carpet = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 11), redMat);
+    carpet.rotation.x = -Math.PI / 2; carpet.position.set(0, -1.98, -0.5); scene.add(carpet);
+    for (const ex of [-1.78, 1.78]) {
+      const edge = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 11), goldMat);
+      edge.rotation.x = -Math.PI / 2; edge.position.set(ex, -1.97, -0.5); scene.add(edge);
+    }
+
+    // Fenêtres avec ciel (cadre doré + meneaux)
+    const skyCv = document.createElement('canvas'); skyCv.width = 128; skyCv.height = 256;
+    const sctx = skyCv.getContext('2d');
+    const grd = sctx.createLinearGradient(0, 0, 0, 256);
+    grd.addColorStop(0, '#bfe4ff'); grd.addColorStop(1, '#eef8ff');
+    sctx.fillStyle = grd; sctx.fillRect(0, 0, 128, 256);
+    sctx.fillStyle = 'rgba(255,255,255,0.9)';
+    sctx.beginPath(); sctx.arc(38, 80, 20, 0, 7); sctx.arc(66, 76, 26, 0, 7); sctx.arc(92, 84, 16, 0, 7); sctx.fill();
+    const skyTex = new THREE.CanvasTexture(skyCv);
+    function makeWindow(x, y) {
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(2.7, 4.1, 0.22), goldMat);
+      frame.position.set(x, y, -6.46); scene.add(frame);
+      const sky = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 3.7), new THREE.MeshBasicMaterial({ map: skyTex }));
+      sky.position.set(x, y, -6.33); scene.add(sky);
+      const barV = new THREE.Mesh(new THREE.BoxGeometry(0.1, 3.7, 0.06), goldMat); barV.position.set(x, y, -6.29); scene.add(barV);
+      const barH = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.1, 0.06), goldMat); barH.position.set(x, y, -6.29); scene.add(barH);
+    }
+    makeWindow(-8.8, 3.4);
+    makeWindow(8.8, 3.4);
+
+    // Distributeurs (ATM) au-delà des piliers
+    const atmScrCv = document.createElement('canvas'); atmScrCv.width = 128; atmScrCv.height = 96;
+    const ac = atmScrCv.getContext('2d');
+    ac.fillStyle = '#06303d'; ac.fillRect(0, 0, 128, 96);
+    ac.fillStyle = '#38e1d6'; ac.font = 'bold 26px Segoe UI, sans-serif';
+    ac.textAlign = 'center'; ac.textBaseline = 'middle'; ac.fillText('ATM', 64, 34);
+    ac.font = 'bold 16px Segoe UI, sans-serif'; ac.fillText('TechCorp', 64, 64);
+    const atmScrTex = new THREE.CanvasTexture(atmScrCv);
+    function makeATM(x) {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.6, 0.9), counterMat);
+      body.position.y = -0.7; g.add(body);
+      const top = new THREE.Mesh(new THREE.BoxGeometry(1.44, 0.4, 0.94), goldMat);
+      top.position.y = 0.78; g.add(top);
+      const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.72), new THREE.MeshBasicMaterial({ map: atmScrTex }));
+      screen.position.set(0, 0.35, 0.46); g.add(screen);
+      const slot = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.07, 0.06), goldMat);
+      slot.position.set(0, -0.15, 0.46); g.add(slot);
+      const pad = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.12),
+        new THREE.MeshStandardMaterial({ color: 0x2a3550, roughness: 0.6 }));
+      pad.position.set(0, -0.7, 0.44); pad.rotation.x = -0.45; g.add(pad);
+      g.position.set(x, 0, -6.0); scene.add(g);
+    }
+    makeATM(-13);
+    makeATM(13);
+
+    // Plantes (pot doré + feuillage low-poly) pour combler les côtés
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x3f8f5a, roughness: 0.75, flatShading: true });
+    function makePlant(x, z) {
+      const g = new THREE.Group();
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.32, 0.75, 16), goldMat);
+      pot.position.y = -1.62; g.add(pot);
+      const blobs = [[0, -0.95, 0, 0.55], [0.32, -0.7, 0.1, 0.42], [-0.3, -0.72, -0.05, 0.4], [0.05, -0.45, -0.1, 0.38]];
+      for (const [bx, by, bz, r] of blobs) {
+        const leaf = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), leafMat);
+        leaf.position.set(bx, by, bz); g.add(leaf);
+      }
+      g.position.set(x, 0, z); scene.add(g);
+    }
+    makePlant(-11, -5.3); makePlant(11, -5.3);     // contre les piliers
+    makePlant(-6.9, -5.7); makePlant(6.9, -5.7);   // entre écran et fenêtre
+    makePlant(-8.2, -0.6); makePlant(8.2, -0.6);   // côtés avant, près des guichets
+
+    // --- Écrans boursiers (texture canvas mise à jour en direct) ---
+    function makeScreen(x, y) {
+      const cv = document.createElement('canvas'); cv.width = 560; cv.height = 360;
+      const ctx = cv.getContext('2d');
+      const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(5.6, 3.75, 0.18),
+        new THREE.MeshStandardMaterial({ color: 0x0a1322, metalness: 0.6, roughness: 0.4 }));
+      frame.position.set(x, y, -6.42); scene.add(frame);
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 3.35), new THREE.MeshBasicMaterial({ map: tex }));
+      mesh.position.set(x, y, -6.3); scene.add(mesh);
+      return { cv, ctx, tex };
+    }
+    const screenA = makeScreen(-4.6, 3.1);
+    const screenB = makeScreen(4.6, 3.1);
+
+    function drawTicker(s, title, rows) {
+      const { ctx, cv, tex } = s;
+      ctx.fillStyle = '#04101c'; ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.fillStyle = 'rgba(56,225,214,0.16)'; ctx.fillRect(0, 0, cv.width, 64);
+      ctx.fillStyle = '#38e1d6'; ctx.beginPath(); ctx.arc(30, 32, 9, 0, 7); ctx.fill();
+      ctx.fillStyle = '#dff7ff'; ctx.textBaseline = 'middle';
+      ctx.textAlign = 'left'; ctx.font = 'bold 30px Segoe UI, sans-serif';
+      ctx.fillText(title, 52, 34);
+      rows.forEach((r, i) => {
+        const y = 116 + i * 82;
+        ctx.font = 'bold 46px Segoe UI, sans-serif';
+        ctx.textAlign = 'left'; ctx.fillStyle = '#9fb4cf'; ctx.fillText(r.sym, 28, y);
+        ctx.textAlign = 'right'; ctx.fillStyle = '#ffffff'; ctx.fillText(r.price, cv.width - 168, y);
+        const up = r.chg >= 0;
+        ctx.fillStyle = up ? '#43e08a' : '#ff6b6b'; ctx.font = 'bold 28px Segoe UI, sans-serif';
+        ctx.fillText((up ? '▲' : '▼') + Math.abs(r.chg).toFixed(2) + '%', cv.width - 22, y);
+      });
+      tex.needsUpdate = true;
+    }
+
+    // --- Gros dollar doré (pièce + symbole) ---
+    const coin = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, 0.32, 48), goldMat);
+    coin.rotation.x = Math.PI / 2; coin.position.set(0, 3.5, -6.0); scene.add(coin);
+    const dollarCv = document.createElement('canvas'); dollarCv.width = dollarCv.height = 256;
+    const dctx = dollarCv.getContext('2d');
+    dctx.fillStyle = '#0a1322'; dctx.font = 'bold 230px Georgia, serif';
+    dctx.textAlign = 'center'; dctx.textBaseline = 'middle'; dctx.fillText('$', 128, 142);
+    const dollar = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 2.4),
+      new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(dollarCv), transparent: true }));
+    dollar.position.set(0, 3.5, -5.82); scene.add(dollar);
+
+    // --- Guichets ---
+    function makeCounter(x, label) {
+      const g = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.BoxGeometry(3, 1.3, 1.3), counterMat);
+      base.position.y = -1.35; g.add(base);
+      const frontRed = new THREE.Mesh(new THREE.BoxGeometry(3.02, 0.95, 0.06), redMat);
+      frontRed.position.set(0, -1.4, 0.66); g.add(frontRed);
+      const top = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.16, 1.6), goldMat);
+      top.position.y = -0.66; g.add(top);
+      for (const px of [-1.3, 1.3]) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.2, 12), goldMat);
+        post.position.set(px, 0.05, 0); g.add(post);
+      }
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.05, 0.06), glassMat);
+      glass.position.set(0, 0.05, 0); g.add(glass);
+      const lc = document.createElement('canvas'); lc.width = 256; lc.height = 64;
+      const lctx = lc.getContext('2d');
+      lctx.fillStyle = '#101a2c'; lctx.fillRect(0, 0, 256, 64);
+      lctx.fillStyle = '#38e1d6'; lctx.font = 'bold 30px Segoe UI, sans-serif';
+      lctx.textAlign = 'center'; lctx.textBaseline = 'middle'; lctx.fillText(label, 128, 36);
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.42),
+        new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(lc), transparent: true }));
+      sign.position.set(0, 0.8, 0); g.add(sign);
+      g.position.set(x, 0, -1.8); scene.add(g);
+    }
+    makeCounter(-5.2, 'GUICHET 1');
+    makeCounter(5.2, 'GUICHET 2');
+
+    // --- Données de marché : crypto en direct (CoinGecko) + actions simulées ---
+    const stocks = { AAPL: { p: 213.4, base: 213.4 }, TSLA: { p: 251.2, base: 251.2 }, NVDA: { p: 126.8, base: 126.8 } };
+    const fmtP = (n) => n >= 1000 ? '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '$' + n.toFixed(2);
+    async function refreshMarkets() {
+      let crypto = [{ sym: 'BTC', price: '—', chg: 0 }, { sym: 'ETH', price: '—', chg: 0 }, { sym: 'SOL', price: '—', chg: 0 }];
+      try {
+        const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true');
+        const d = await r.json();
+        crypto = [
+          { sym: 'BTC', price: fmtP(d.bitcoin.usd), chg: d.bitcoin.usd_24h_change },
+          { sym: 'ETH', price: fmtP(d.ethereum.usd), chg: d.ethereum.usd_24h_change },
+          { sym: 'SOL', price: fmtP(d.solana.usd), chg: d.solana.usd_24h_change },
+        ];
+      } catch (e) { /* garde l'affichage précédent */ }
+      drawTicker(screenA, 'MARCHÉ CRYPTO', crypto);
+
+      const rows = Object.entries(stocks).map(([sym, o]) => {
+        o.p *= 1 + (Math.random() - 0.5) * 0.012;          // petite marche aléatoire
+        return { sym, price: fmtP(o.p), chg: (o.p / o.base - 1) * 100 };
+      });
+      drawTicker(screenB, 'ACTIONS', rows);
+    }
+    drawTicker(screenA, 'MARCHÉ CRYPTO', [{ sym: 'BTC', price: '…', chg: 0 }, { sym: 'ETH', price: '…', chg: 0 }, { sym: 'SOL', price: '…', chg: 0 }]);
+    drawTicker(screenB, 'ACTIONS', [{ sym: 'AAPL', price: '…', chg: 0 }, { sym: 'TSLA', price: '…', chg: 0 }, { sym: 'NVDA', price: '…', chg: 0 }]);
+    refreshMarkets();
+    setInterval(refreshMarkets, 15000);
+
+    // ---------- Interaction : rotation (drag) + zoom (molette) ----------
+    const baseOffset = camEndPos.clone().sub(camEndTarget);   // cadrage de référence (zoom = 1)
+    let zoom = 1, targetZoom = 1;
+    const ZOOM_MIN = 0.55, ZOOM_MAX = 3.8;
+
+    let spin = 0, spinVel = 0, lastSpin = 0, spinAccum = 0;
+    let dragging = false, lastX = 0;
+    const TURNS_FOR_DIZZY = 5 * Math.PI * 2;   // 5 tours complets
+
+    let dizzy = false, dizzyStart = 0;
+    const DIZZY_DUR = 6.4;   // titube → tombe → se relève
+    const dizzySound = new Audio('dizzy.mp3');
+    function triggerDizzy() {
+      dizzy = true; dizzyStart = clock.getElapsedTime();
+      spinVel *= 0.2; spinAccum = 0;
+      targetZoom = Math.max(targetZoom, 2.2);   // recule pour voir la tête et les étoiles
+      stars.visible = true;
+      dizzySound.currentTime = 0;
+      dizzySound.play().catch(() => {});         // démarre le son (autorisé après le clic/drag)
+    }
+
+    let angry = false, angryStart = 0;
+    const ANGRY_DUR = 1.5;
+    function triggerAngry() { angry = true; angryStart = clock.getElapsedTime(); }
+
+    window.addEventListener('wheel', (ev) => {
+      if (screenState !== 'off') return;    // zoom/dézoom uniquement quand le robot est éteint
+      ev.preventDefault();
+      targetZoom = THREE.MathUtils.clamp(targetZoom * (1 + Math.sign(ev.deltaY) * 0.12), ZOOM_MIN, ZOOM_MAX);
+    }, { passive: false });
+
+    // ---------- Belly chat projection ----------
+    const bellyChat = document.getElementById('belly-chat');
+    const vCenter = new THREE.Vector3(), vLeft = new THREE.Vector3(), vRight = new THREE.Vector3();
+
+    function project(obj, out) {
+      obj.getWorldPosition(out);
+      out.project(camera);
+      return out;
+    }
+    const _q = new THREE.Quaternion(), _n = new THREE.Vector3(), _toCam = new THREE.Vector3(), _wc = new THREE.Vector3();
+    function placeChat() {
+      const w = window.innerWidth, h = window.innerHeight;
+      // L'écran est-il allumé ET tourné vers la caméra ?
+      aCenter.getWorldPosition(_wc);
+      bellyScreen.getWorldQuaternion(_q);
+      _n.set(0, 0, 1).applyQuaternion(_q).normalize();
+      _toCam.copy(camera.position).sub(_wc).normalize();
+      const visible = (screenState !== 'off') && !dizzy && (_n.dot(_toCam) > 0.25);
+      bellyChat.style.opacity = visible ? '1' : '0';
+      bellyChat.style.pointerEvents = visible ? 'auto' : 'none';
+      if (!visible) return;
+      project(aCenter, vCenter);
+      project(aLeft, vLeft);
+      project(aRight, vRight);
+      const cx = (vCenter.x * 0.5 + 0.5) * w;
+      const cy = (-vCenter.y * 0.5 + 0.5) * h;
+      const lx = (vLeft.x * 0.5 + 0.5) * w;
+      const rx = (vRight.x * 0.5 + 0.5) * w;
+      const pxWidth = Math.abs(rx - lx) * 0.94;          // léger inset dans le bezel
+      const pxHeight = pxWidth * (SCREEN_H / SCREEN_W);
+      bellyChat.style.left = cx + 'px';
+      bellyChat.style.top = cy + 'px';
+      bellyChat.style.width = pxWidth + 'px';
+      bellyChat.style.height = pxHeight + 'px';
+    }
+
+    // ---------- Écran ON/OFF + séquence de démarrage ----------
+    const boot = document.getElementById('boot');
+    const chatUI = document.getElementById('chat-ui');
+    const chatHead = document.getElementById('chat-head');
+    let screenState = 'off';           // 'off' | 'booting' | 'on'
+    let screenGlow = 0, screenTargetGlow = 0;
+    let introDone = false, btnPress = 0;
+
+    function setScreen(state) {
+      screenState = state;
+      screenTargetGlow = (state === 'off') ? 0 : 1;
+      if (state === 'off') { powerBtnMat.color.set(0xff5555); powerBtnMat.emissive.set(0xff2222); }
+      else { powerBtnMat.color.set(0x43e08a); powerBtnMat.emissive.set(0x2bd47a); }
+      boot.style.display = (state === 'booting') ? 'flex' : 'none';
+      chatUI.style.display = (state === 'on') ? 'flex' : 'none';
+    }
+
+    const BOOT_LINES = [
+      'TECHCORP OS v3.5  —  boot',
+      '> init secure-finance module ...',
+      '> chargement Phi-3.5 Financial ...',
+      '> calibration des capteurs ...',
+      '> PRÊT ✓',
+    ];
+    function runBoot() {
+      boot.innerHTML = '';
+      let i = 0;
+      (function next() {
+        if (screenState !== 'booting') return;       // annulé si on coupe pendant le boot
+        if (i >= BOOT_LINES.length) { setTimeout(() => screenState === 'booting' && setScreen('on'), 300); return; }
+        const d = document.createElement('div');
+        d.className = 'boot-line';
+        d.textContent = BOOT_LINES[i++];
+        boot.appendChild(d);
+        setTimeout(next, 340);
+      })();
+    }
+    function powerOn() { if (screenState !== 'off') return; setScreen('booting'); runBoot(); }
+    function powerOff() { setScreen('off'); }
+    function togglePower() { btnPress = 1; (screenState === 'off') ? powerOn() : powerOff(); }
+
+    // Clic = bouton power ; cliquer-glisser ailleurs = faire tourner le robot
+    const raycaster = new THREE.Raycaster();
+    const clickNdc = new THREE.Vector2();
+    function setRay(e) {
+      clickNdc.x = (e.clientX / window.innerWidth) * 2 - 1;
+      clickNdc.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(clickNdc, camera);
+    }
+    function hitPower(e) { setRay(e); return raycaster.intersectObject(powerBtn, true).length > 0; }
+    function hitEyes(e) { setRay(e); return raycaster.intersectObjects([eyeL, eyeR], false).length > 0; }
+    canvas.addEventListener('pointerdown', (e) => {
+      if (hitPower(e)) { togglePower(); return; }
+      if (hitEyes(e)) { triggerAngry(); return; }    // clic sur un œil → fâché
+      if (screenState !== 'off') return;             // rotation uniquement quand le robot est éteint
+      dragging = true; lastX = e.clientX; canvas.style.cursor = 'grabbing';
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (dragging) {
+        const dx = e.clientX - lastX; lastX = e.clientX;
+        spin += dx * 0.012; spinVel = dx * 0.012;
+        return;
+      }
+      if (hitPower(e) || hitEyes(e)) canvas.style.cursor = 'pointer';
+      else canvas.style.cursor = (screenState === 'off') ? 'grab' : 'default';
+    });
+    window.addEventListener('pointerup', () => { dragging = false; });
+    canvas.style.cursor = 'default';
+
+    setScreen('off');
+
+    // ---------- Animation ----------
+    let nextBlink = 2 + Math.random() * 3, prevT = 0;
+    let nextWave = 6, waving = false, waveStart = 0;
+    const clock = new THREE.Clock();
+    function tick() {
+      const t = clock.getElapsedTime();
+      const dt = t - prevT; prevT = t;
+
+      // --- Caméra : zoom d'intro, puis zoom molette (robot reste centré) ---
+      if (introT < INTRO_DUR) {
+        introT = Math.min(introT + dt, INTRO_DUR);
+        const e = easeInOutCubic(introT / INTRO_DUR);
+        camera.position.lerpVectors(camStartPos, camEndPos, e);
+        camTarget.lerpVectors(camStartTarget, camEndTarget, e);
+        camera.lookAt(camTarget);
+      } else {
+        if (!introDone) { introDone = true; powerOn(); }
+        if (screenState !== 'off') targetZoom = 1;        // allumé : verrouillé sur le ventre
+        zoom += (targetZoom - zoom) * Math.min(dt * 6, 1);
+        camera.position.copy(camEndTarget).addScaledVector(baseOffset, zoom);
+        camera.lookAt(camEndTarget);
+      }
+
+      // --- Rotation : drag + inertie UNIQUEMENT éteint ; sinon recentrage face caméra ---
+      if (screenState !== 'off') {
+        spinVel = 0;
+        spin = THREE.MathUtils.lerp(spin, 0, Math.min(dt * 4, 1));
+        lastSpin = spin; spinAccum = 0;
+      } else {
+        if (!dragging) { spin += spinVel; spinVel *= 0.94; if (Math.abs(spinVel) < 1e-4) spinVel = 0; }
+        const dSpin = spin - lastSpin; lastSpin = spin;
+        if (!dizzy) {
+          spinAccum += Math.abs(dSpin);
+          if (spinAccum >= TURNS_FOR_DIZZY) triggerDizzy();
+        }
+      }
+      robot.rotation.y = spin;
+
+      // Idle hover + breathing
+      robot.position.y = Math.sin(t * 1.4) * 0.06;
+      robot.rotation.x = Math.sin(t * 0.8) * 0.015;
+      head.rotation.y = dizzy ? 0 : Math.sin(t * 0.7) * 0.08;
+      // Bras : agitation (vertige), coucou de la main, ou balancement
+      arms.forEach(({ arm, sx, hand }, i) => {
+        hand.scale.setScalar(1);
+        if (dizzy && (t - dizzyStart) < 2.2) {                                   // panique : bras qui s'agitent
+          arm.rotation.z = Math.sin(t * 15 + i * 2) * 0.5;
+          arm.rotation.x = Math.sin(t * 12 + i) * 0.45;
+        } else if (angry && sx === 1) {
+          arm.rotation.x = -1.0 + Math.sin(t * 20) * 0.16;
+          arm.rotation.z = THREE.MathUtils.lerp(arm.rotation.z, -0.15, 0.2);
+          hand.scale.setScalar(1.45);
+        } else if (sx === 1 && waving) {               // bras droit lève la main et fait coucou
+          const wt = t - waveStart;
+          arm.rotation.z = THREE.MathUtils.lerp(arm.rotation.z, 2.3, 0.15);
+          arm.rotation.x = Math.sin(wt * 11) * 0.4;
+          if (wt > 2.2) { waving = false; nextWave = t + 7 + Math.random() * 5; }
+        } else {                                       // repos : léger balancement
+          arm.rotation.z = THREE.MathUtils.lerp(arm.rotation.z, 0, 0.12);
+          arm.rotation.x = Math.sin(t * 1.2 + i) * 0.18;
+        }
+      });
+      if (!waving && !dizzy && !angry && screenState === 'off' && t > nextWave) { waving = true; waveStart = t; }
+      // Antenna pulse
+      const pulse = 0.9 + Math.sin(t * 4) * 0.4;
+      accentMat.emissiveIntensity = 1.1 + Math.sin(t * 2.5) * 0.3;
+      antBall.scale.setScalar(pulse);
+      halo.material.opacity = 0.1 + Math.abs(Math.sin(t * 1.4)) * 0.06;
+      if (propBeanie.visible) propeller.rotation.y += dt * 14;   // l'hélice tourne
+
+      // --- Écran : allumage doux (flicker discret, sans "glitch") + rebond bouton ---
+      screenGlow += (screenTargetGlow - screenGlow) * Math.min(dt * 4, 1);
+      let g = screenGlow;
+      if (screenState === 'booting') g *= 0.9 + 0.1 * Math.sin(t * 22);
+      screenMat.emissiveIntensity = 0.12 + g * 1.2;
+      bezelMat.emissiveIntensity = 0.25 + screenGlow * 1.6;
+      btnPress = Math.max(0, btnPress - dt * 4);
+      powerBtn.scale.z = 1 - btnPress * 0.45;
+
+      // --- Vertige : étoiles + titubation, chute sur le côté, puis relevage ---
+      robot.rotation.z = 0; head.rotation.z = 0;
+      if (dizzy) {
+        const dz = t - dizzyStart;
+        eyeL.scale.y = eyeR.scale.y = 0.12;               // yeux fermés
+        if (stars.visible) {
+          stars.rotation.y = t * 3.0;
+          stars.children.forEach((s, i) => { s.rotation.z = t * 4 + i; });
+        }
+        if (dz < 2.2) {
+          // titube de plus en plus
+          const amp = 0.08 + (dz / 2.2) * 0.30;
+          robot.rotation.z = Math.sin(t * 9) * amp;
+          head.rotation.z = Math.sin(t * 7) * 0.22;
+        } else if (dz < 3.3) {
+          // bascule et tombe sur le côté
+          const p = easeInOutCubic(Math.min((dz - 2.2) / 1.1, 1));
+          robot.rotation.z = THREE.MathUtils.lerp(0.3, -1.32, p);
+          robot.position.y = THREE.MathUtils.lerp(0, -0.85, p);
+          head.rotation.z = THREE.MathUtils.lerp(0.2, 0.55, p);
+          if (p > 0.4) stars.visible = false;
+        } else if (dz < 4.4) {
+          // à terre, petit rebond amorti
+          const b = Math.max(0, 1 - (dz - 3.3) * 1.6);
+          robot.rotation.z = -1.32 + Math.sin((dz - 3.3) * 14) * 0.04 * b;
+          robot.position.y = -0.85;
+          head.rotation.z = 0.55;
+        } else {
+          // se relève
+          const p = easeInOutCubic(Math.min((dz - 4.4) / 1.8, 1));
+          robot.rotation.z = THREE.MathUtils.lerp(-1.32, 0, p);
+          robot.position.y = THREE.MathUtils.lerp(-0.85, 0, p);
+          head.rotation.z = THREE.MathUtils.lerp(0.55, 0, p);
+          if (dz > 6.0) eyeL.scale.y = eyeR.scale.y = 1;   // rouvre les yeux
+        }
+        if (dz >= DIZZY_DUR) {
+          dizzy = false; stars.visible = false; eyeL.scale.y = eyeR.scale.y = 1;
+          dizzySound.pause(); dizzySound.currentTime = 0;
+        }
+      } else if (t > nextBlink) {
+        const k = (t - nextBlink);
+        eyeL.scale.y = eyeR.scale.y = k < 0.12 ? 0.1 : 1;
+        if (k > 0.12) { nextBlink = t + 2 + Math.random() * 3; eyeL.scale.y = eyeR.scale.y = 1; }
+      }
+
+      // Yeux rouges et froncés quand le robot est fâché (clic sur un œil)
+      if (angry) {
+        eyeMat.color.setHex(0xff3326); eyeMat.emissive.setHex(0xff2a1a);
+        eyeL.scale.y = eyeR.scale.y = 0.55;
+        browL.visible = browR.visible = true;
+        if (t - angryStart >= ANGRY_DUR) {
+          angry = false;
+          eyeMat.color.setHex(0x38e1d6); eyeMat.emissive.setHex(0x38e1d6);
+          eyeL.scale.y = eyeR.scale.y = 1;
+          browL.visible = browR.visible = false;
+        }
+      }
+
+      placeChat();
+      renderer.render(scene, camera);
+      requestAnimationFrame(tick);
+    }
+    tick();
+
+    // ---------- Resize ----------
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ---------- Chat UI (placeholder, API à brancher plus tard) ----------
+    const log = document.getElementById('chat-log');
+    const input = document.getElementById('chat-text');
+    const sendBtn = document.getElementById('chat-send');
+
+    function addMsg(text, who) {
+      const el = document.createElement('div');
+      el.className = 'msg ' + who;
+      el.textContent = text;
+      log.appendChild(el);
+      log.scrollTop = log.scrollHeight;
+      return el;
+    }
+
+    /**
+     * TODO (intégration future) : remplacer ce stub par un appel au serveur
+     * d'inférence déployé par l'équipe INFRA. Exemple Ollama :
+     *
+     *   const r = await fetch('http://localhost:11434/api/chat', {
+     *     method: 'POST',
+     *     headers: { 'Content-Type': 'application/json' },
+     *     body: JSON.stringify({ model: 'phi3-financial', messages: [...], stream: false })
+     *   });
+     *   const data = await r.json();
+     *   return data.message.content;
+     */
+    async function sendToModel(question) {
+      // Placeholder tant que l'API n'est pas connectée.
+      await new Promise(res => setTimeout(res, 450));
+      return "🔌 Modèle non connecté pour l'instant. Cette réponse sera fournie par Phi-3.5 Financial une fois l'API branchée.";
+    }
+
+    async function handleSend() {
+      const q = input.value.trim();
+      if (!q) return;
+      addMsg(q, 'user');
+      input.value = '';
+      const pending = addMsg('…', 'bot');
+      try {
+        pending.textContent = await sendToModel(q);
+      } catch (e) {
+        pending.textContent = '⚠️ Erreur de connexion au modèle.';
+      }
+      log.scrollTop = log.scrollHeight;
+    }
+    sendBtn.addEventListener('click', handleSend);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSend(); });
+
+    // Empêche le drag du robot quand on tape dans le chat
+    bellyChat.addEventListener('pointermove', (e) => e.stopPropagation());
+
+    // ---------- Boutique cosmétique (gratuite) ----------
+    const shopBtn = document.getElementById('shop-btn');
+    const shopPanel = document.getElementById('shop-panel');
+    const shopClose = document.getElementById('shop-close');
+    const hatToggle = document.getElementById('hat-toggle');
+    const propToggle = document.getElementById('prop-toggle');
+    let equipped = 'none';                          // 'none' | 'cowboy' | 'propeller'
+    function setCosmetic(name) {
+      equipped = (equipped === name) ? 'none' : name;   // clic sur l'article équipé = retirer
+      cowboyHat.visible = equipped === 'cowboy';
+      propBeanie.visible = equipped === 'propeller';
+      const anyHat = equipped !== 'none';
+      antenna.visible = !anyHat;                    // l'antenne disparaît sous un chapeau
+      antBall.visible = !anyHat;
+      hatToggle.textContent = equipped === 'cowboy' ? 'Retirer' : 'Équiper';
+      hatToggle.classList.toggle('equipped', equipped === 'cowboy');
+      propToggle.textContent = equipped === 'propeller' ? 'Retirer' : 'Équiper';
+      propToggle.classList.toggle('equipped', equipped === 'propeller');
+    }
+    shopBtn.addEventListener('click', () => shopPanel.classList.toggle('hidden'));
+    shopClose.addEventListener('click', () => shopPanel.classList.add('hidden'));
+    hatToggle.addEventListener('click', () => setCosmetic('cowboy'));
+    propToggle.addEventListener('click', () => setCosmetic('propeller'));
+  </script>
+</body>
+</html>
