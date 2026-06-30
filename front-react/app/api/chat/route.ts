@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 const OLLAMA_CHAT_URL =
   process.env.OLLAMA_CHAT_URL ?? "http://178.170.25.232:11434/api/chat";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "phi3.5-finance";
-const OLLAMA_TIMEOUT_MS = 120_000;
 const SYSTEM_PROMPT = [
   "Tu es l'assistant financier de TechCorp.",
   "Réponds toujours en français, sauf si l'utilisateur demande explicitement une autre langue.",
@@ -20,9 +19,6 @@ type ChatMessage = {
 };
 
 export async function POST(request: Request) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), OLLAMA_TIMEOUT_MS);
-
   try {
     const body = (await request.json()) as {
       messages?: ChatMessage[];
@@ -50,7 +46,6 @@ export async function POST(request: Request) {
 
     const response = await fetch(OLLAMA_CHAT_URL, {
       method: "POST",
-      signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
       },
@@ -81,16 +76,6 @@ export async function POST(request: Request) {
       raw: data,
     });
   } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      return NextResponse.json(
-        {
-          error:
-            "Le modèle met trop de temps à répondre. Réessayez dans quelques instants.",
-        },
-        { status: 504 },
-      );
-    }
-
     return NextResponse.json(
       {
         error: "Unable to contact the chat model.",
@@ -98,7 +83,5 @@ export async function POST(request: Request) {
       },
       { status: 502 },
     );
-  } finally {
-    clearTimeout(timeout);
   }
 }

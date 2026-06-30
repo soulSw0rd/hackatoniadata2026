@@ -54,6 +54,12 @@ export default function ChatbotExperience() {
       <button id="to-shop" className="nav-arrow" title="Aller à la boutique">
         Boutique
       </button>
+      <button id="to-penalty" className="nav-arrow" title="Jouer au tir au but">
+        Tir au but
+      </button>
+      <button id="to-blackjack" className="nav-arrow" title="Jouer au blackjack">
+        Blackjack
+      </button>
       <button
         id="to-bank"
         className="nav-arrow hidden"
@@ -87,6 +93,53 @@ export default function ChatbotExperience() {
             </button>
           </div>
         ))}
+      </div>
+
+      <div id="penalty-panel" className="hidden">
+        <div className="penalty-head">
+          Tir au but <span id="penalty-close">X</span>
+        </div>
+        <div className="penalty-score">
+          <span>Score</span>
+          <span id="penalty-score">0 / 0</span>
+        </div>
+        <div id="penalty-status" className="penalty-status">
+          Clique dans la cage pour tirer.
+        </div>
+      </div>
+
+      <div id="blackjack-panel" className="hidden">
+        <div className="blackjack-head">
+          Blackjack <span id="blackjack-close">X</span>
+        </div>
+        <div className="blackjack-table">
+          <div className="blackjack-bankroll">
+            <span>Solde</span>
+            <strong id="blackjack-balance">$0</strong>
+            <label htmlFor="blackjack-bet">Mise</label>
+            <input id="blackjack-bet" type="number" min="1" defaultValue="1" />
+          </div>
+          <div className="blackjack-row dealer">
+            <div className="blackjack-label">
+              Banque <span id="dealer-score">0</span>
+            </div>
+            <div id="dealer-hand" className="card-row" />
+          </div>
+          <div id="blackjack-status" className="blackjack-status">
+            Fais 21 sans dépasser.
+          </div>
+          <div className="blackjack-row player">
+            <div className="blackjack-label">
+              Joueur <span id="player-score">0</span>
+            </div>
+            <div id="player-hand" className="card-row" />
+          </div>
+          <div className="blackjack-actions">
+            <button id="blackjack-hit">Carte</button>
+            <button id="blackjack-stand">Rester</button>
+            <button id="blackjack-new">Miser</button>
+          </div>
+        </div>
       </div>
 
       <Script src="/chatbot/app.js" type="module" strategy="afterInteractive" />
