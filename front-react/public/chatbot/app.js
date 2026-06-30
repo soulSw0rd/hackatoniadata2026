@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import * as THREE from 'https://esm.sh/three@0.160.0';
+import { RoundedBoxGeometry } from 'https://esm.sh/three@0.160.0/examples/jsm/geometries/RoundedBoxGeometry.js';
 
 // ---------- Renderer / scene / camera ----------
 const canvas = document.getElementById('scene');
@@ -672,7 +672,7 @@ const TURNS_FOR_DIZZY = 5 * Math.PI * 2;   // 5 tours complets
 
 let dizzy = false, dizzyStart = 0;
 const DIZZY_DUR = 6.4;   // titube → tombe → se relève
-const dizzySound = new Audio('dizzy.mp3');
+const dizzySound = new Audio('/chatbot/dizzy.mp3');
 function triggerDizzy() {
   dizzy = true; dizzyStart = clock.getElapsedTime();
   spinVel *= 0.2; spinAccum = 0;

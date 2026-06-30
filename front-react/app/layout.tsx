@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "@/components/chatbot/chatbot.css";
 
 export const metadata: Metadata = {
   title: "Hackatonia Data 2026",

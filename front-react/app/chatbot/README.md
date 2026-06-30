@@ -10,19 +10,19 @@ serveur maison) est branchée dans la fonction `sendToModel()` de
 La page Next.js est disponible sur :
 
 ```text
+/ 
 /chatbot
 ```
 
-Elle affiche l'interface originale en plein écran depuis :
+La structure de l'interface est rendue par le composant :
 
 ```text
-/public/chatbot/index.html
+components/chatbot/ChatbotExperience.tsx
 ```
 
-Organisation des fichiers statiques :
+Fichiers statiques conservés :
 
 ```text
-public/chatbot/index.html   # structure HTML
 public/chatbot/styles.css   # styles de l'interface
 public/chatbot/app.js       # scène Three.js, chat, boutique
 public/chatbot/dizzy.mp3    # son du mode vertige
