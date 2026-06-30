@@ -16,7 +16,7 @@
     color: var(--ink);
     font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   }
-  #scene { position: fixed; inset: 0; display: block; }
+  #scene { position: fixed; inset: 0; display: block; touch-action: none; }
 
   .brand {
     position: fixed; top: 22px; left: 26px; z-index: 5;
@@ -202,7 +202,7 @@
 
   /* ---- Mini-jeu blackjack ---- */
   #blackjack-panel {
-    position: fixed; top: 64px; right: 24px; z-index: 7; width: 292px;
+    position: fixed; top: 16px; right: 24px; z-index: 7; width: 292px;
     color: #fffaf0; pointer-events: auto;
   }
   #blackjack-panel.hidden { display: none; }
@@ -292,3 +292,124 @@
   .nav-arrow.nav-north { top: 24px; left: 50%; transform: translateX(-50%); }
   .nav-arrow.nav-south { bottom: 24px; left: 50%; transform: translateX(-50%); }
   .nav-arrow.hidden { display: none; }
+
+  @media (max-width: 700px) {
+    .brand {
+      top: 12px; left: 14px; right: 86px;
+      font-size: 10px; letter-spacing: .11em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .hint { display: none; }
+
+    #shop-btn {
+      top: 10px; right: 12px;
+      padding: 8px 10px; font-size: 12px; border-radius: 9px;
+    }
+
+    #shop-panel,
+    #penalty-panel,
+    #blackjack-panel {
+      top: 10px; left: 12px; right: 12px; width: auto;
+      max-height: calc(100dvh - 104px);
+    }
+
+    #shop-panel,
+    #penalty-panel {
+      overflow: hidden auto;
+    }
+
+    #blackjack-panel {
+      bottom: auto;
+    }
+
+    .shop-head,
+    .penalty-head,
+    .blackjack-head {
+      padding: 9px 12px; font-size: 13px;
+    }
+
+    .shop-item {
+      gap: 8px; padding: 10px 12px;
+    }
+    .shop-name {
+      font-size: 13px; line-height: 1.2;
+    }
+    .shop-buy {
+      width: 76px; font-size: 11px;
+    }
+
+    .blackjack-table {
+      gap: 8px; padding: 9px 10px 10px;
+    }
+    .blackjack-bankroll {
+      grid-template-columns: auto 1fr auto 58px;
+      gap: 6px; padding: 7px 8px;
+    }
+    .blackjack-bankroll input {
+      width: 58px; padding: 6px;
+    }
+    .blackjack-status {
+      padding: 9px 10px; font-size: 13px;
+    }
+    .blackjack-actions {
+      gap: 6px;
+    }
+    .blackjack-actions button {
+      min-height: 36px; font-size: 11px; padding: 0 6px;
+    }
+
+    .nav-arrow {
+      padding: 10px 12px;
+      font-size: 12px;
+      border-radius: 10px;
+      max-width: 112px;
+      white-space: normal;
+      line-height: 1.15;
+    }
+    .nav-arrow.nav-west { left: 10px; }
+    .nav-arrow.nav-east { right: 10px; }
+    .nav-arrow.nav-north { top: 10px; }
+    .nav-arrow.nav-south { bottom: 10px; }
+
+    .chat-head {
+      padding: 7px 9px; font-size: 11px;
+    }
+    .chat-head .status {
+      display: none;
+    }
+    .chat-log {
+      padding: 8px; gap: 6px; font-size: 11px;
+    }
+    .msg {
+      max-width: 92%; padding: 6px 8px;
+    }
+    .chat-input {
+      padding: 7px; gap: 5px;
+    }
+    .chat-input input,
+    .chat-input button {
+      font-size: 11px;
+    }
+    .chat-input button {
+      padding: 0 9px;
+    }
+  }
+
+  @media (max-width: 420px) {
+    #shop-panel,
+    #penalty-panel,
+    #blackjack-panel {
+      left: 8px; right: 8px;
+    }
+    .blackjack-actions {
+      grid-template-columns: 1fr;
+    }
+    .blackjack-actions button {
+      min-height: 34px;
+    }
+    .nav-arrow {
+      max-width: 92px;
+      padding: 9px 10px;
+      font-size: 11px;
+    }
+  }

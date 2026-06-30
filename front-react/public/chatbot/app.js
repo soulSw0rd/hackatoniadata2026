@@ -890,7 +890,7 @@ function placeChat() {
   const cy = (-vCenter.y * 0.5 + 0.5) * h;
   const lx = (vLeft.x * 0.5 + 0.5) * w;
   const rx = (vRight.x * 0.5 + 0.5) * w;
-  const pxWidth = Math.abs(rx - lx) * 0.94;          // léger inset dans le bezel
+  const pxWidth = THREE.MathUtils.clamp(Math.abs(rx - lx) * 0.94, 240, w - 24); // léger inset dans le bezel
   const pxHeight = pxWidth * (SCREEN_H / SCREEN_W);
   bellyChat.style.left = cx + 'px';
   bellyChat.style.top = cy + 'px';
@@ -964,7 +964,53 @@ function getPenaltyTarget(e) {
     -4.02,
   );
 }
+
+const activePointers = new Map();
+let pinchActive = false;
+let pinchStartDistance = 0;
+let pinchStartZoom = 1;
+
+function canPinchZoom() {
+  return view === 'bank' && screenState === 'off';
+}
+
+function pointerDistance() {
+  const points = Array.from(activePointers.values());
+  if (points.length < 2) return 0;
+  return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+}
+
+function startPinch() {
+  if (!canPinchZoom()) return;
+  pinchStartDistance = pointerDistance();
+  if (pinchStartDistance <= 0) return;
+  pinchStartZoom = targetZoom;
+  pinchActive = true;
+  dragging = false;
+  spinVel = 0;
+}
+
+function updatePinchZoom() {
+  if (!pinchActive || !canPinchZoom()) return false;
+  const distance = pointerDistance();
+  if (distance <= 0) return false;
+  targetZoom = THREE.MathUtils.clamp(
+    pinchStartZoom * (pinchStartDistance / distance),
+    ZOOM_MIN,
+    ZOOM_MAX,
+  );
+  return true;
+}
+
 canvas.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch') {
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    canvas.setPointerCapture?.(e.pointerId);
+    if (activePointers.size >= 2) {
+      startPinch();
+      return;
+    }
+  }
   if (view === 'penalty') {
     const target = getPenaltyTarget(e);
     if (target) shootPenalty(target);
@@ -977,6 +1023,10 @@ canvas.addEventListener('pointerdown', (e) => {
   dragging = true; lastX = e.clientX; canvas.style.cursor = 'grabbing';
 });
 window.addEventListener('pointermove', (e) => {
+  if (activePointers.has(e.pointerId)) {
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (updatePinchZoom()) return;
+  }
   if (dragging) {
     const dx = e.clientX - lastX; lastX = e.clientX;
     spin += dx * 0.012; spinVel = dx * 0.012;
@@ -989,7 +1039,13 @@ window.addEventListener('pointermove', (e) => {
   if (hitPower(e) || hitEyes(e)) canvas.style.cursor = 'pointer';
   else canvas.style.cursor = (screenState === 'off') ? 'grab' : 'default';
 });
-window.addEventListener('pointerup', () => { dragging = false; });
+function endPointer(e) {
+  activePointers.delete(e.pointerId);
+  if (activePointers.size < 2) pinchActive = false;
+  dragging = false;
+}
+window.addEventListener('pointerup', endPointer);
+window.addEventListener('pointercancel', endPointer);
 canvas.style.cursor = 'default';
 
 // ---------- Mini-jeu tir au but ----------
