@@ -3,7 +3,7 @@
 Robot 3D (Three.js) dont **l'écran du ventre** héberge l'interface du chatbot.
 L'UI de chat est en place ; la connexion au serveur d'inférence (Ollama / Triton /
 serveur maison) est branchée dans la fonction `sendToModel()` de
-`public/chatbot/index.html`.
+`public/chatbot/app.js`.
 
 ## Route Next.js
 
@@ -17,6 +17,15 @@ Elle affiche l'interface originale en plein écran depuis :
 
 ```text
 /public/chatbot/index.html
+```
+
+Organisation des fichiers statiques :
+
+```text
+public/chatbot/index.html   # structure HTML
+public/chatbot/styles.css   # styles de l'interface
+public/chatbot/app.js       # scène Three.js, chat, boutique
+public/chatbot/dizzy.mp3    # son du mode vertige
 ```
 
 > Une connexion internet est requise (Three.js est chargé via CDN jsDelivr).
@@ -44,5 +53,4 @@ OLLAMA_MODEL=phi3.5-finance
 
 ## Statut de connexion
 
-Le bandeau de l'écran affiche l'état (`Hors-ligne` tant que l'API n'est pas branchée ;
-passer `#chat-head` en classe `online` et mettre à jour `#chat-status` une fois connecté).
+Le bandeau de l'écran affiche l'état de la route `/api/chat`.
