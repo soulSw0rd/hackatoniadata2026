@@ -1,0 +1,12 @@
+services:
+  front-react:
+    build:
+      context: ./front-react
+      dockerfile: Dockerfile
+    image: front-react:local
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+    restart: unless-stopped
