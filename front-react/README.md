@@ -10,3 +10,11 @@ npm run dev
 ```
 
 Ouvre ensuite http://localhost:3000.
+
+## Lancer avec Docker
+
+```bash
+docker compose up --build
+```
+
+Ouvre ensuite http://localhost:3000.
