@@ -79,6 +79,7 @@
   .msg.user { align-self: flex-end;  background: rgba(56,225,214,.16);  border:1px solid rgba(56,225,214,.3); }
 
   .chat-input {
+    position: relative;
     display: flex; gap: 6px; padding: 8px; border-top: 1px solid rgba(56,225,214,.18);
   }
   .chat-input input {
@@ -90,9 +91,30 @@
   .chat-input button {
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
     border: none; border-radius: 8px; color: #05131a; font-weight: 700;
-    padding: 0 12px; cursor: pointer; font-size: 12px;
+    min-width: 42px; padding: 0 12px; cursor: pointer; font-size: 12px;
   }
   .chat-input button:active { transform: translateY(1px); }
+  .chat-input button.cancel {
+    background: linear-gradient(135deg, #ff7a7a, #ffb13b);
+    color: #2a0808;
+  }
+  .coin-pop {
+    position: absolute;
+    right: 46px;
+    top: -10px;
+    z-index: 2;
+    color: #43e08a;
+    font-size: 13px;
+    font-weight: 800;
+    text-shadow: 0 0 8px rgba(67, 224, 138, .85);
+    pointer-events: none;
+    animation: coinPop .9s ease-out forwards;
+  }
+  @keyframes coinPop {
+    0% { opacity: 0; transform: translateY(8px) scale(.82); }
+    18% { opacity: 1; transform: translateY(0) scale(1.12); }
+    100% { opacity: 0; transform: translateY(-28px) scale(.92); }
+  }
 
   /* ---- Démarrage / écran ---- */
   #chat-ui { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -124,10 +146,11 @@
   #shop-btn:active { transform: translateY(1px); }
   #shop-btn.hidden { display: none; }
   #shop-panel {
-    position: fixed; top: 64px; right: 24px; z-index: 6; width: 290px;
+    position: fixed; top: 64px; right: 24px; z-index: 6; width: 330px;
+    max-height: calc(100vh - 88px); overflow: hidden auto;
     background: #fffaf0; color: #2a2418;
     border: 1px solid #e7b53a; border-radius: 14px;
-    box-shadow: 0 18px 50px rgba(0,0,0,.25); overflow: hidden;
+    box-shadow: 0 18px 50px rgba(0,0,0,.25);
   }
   #shop-panel.hidden { display: none; }
   .shop-head {
@@ -138,16 +161,23 @@
   }
   #shop-close { cursor: pointer; opacity: .55; font-weight: 400; }
   #shop-close:hover { opacity: 1; }
-  .shop-item { display: flex; align-items: center; gap: 12px; padding: 14px; }
-  .shop-ico { font-size: 38px; line-height: 1; }
+  .wallet {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; background: rgba(67,224,138,.12);
+    border-bottom: 1px solid #ecd9a6; font-size: 13px; font-weight: 700;
+  }
+  .wallet span:last-child { color: #2e9c5a; font-size: 16px; }
+  .shop-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid rgba(236,217,166,.65); }
   .shop-info { flex: 1; }
   .shop-name { font-weight: 600; }
   .shop-price { font-size: 12px; color: #2e9c5a; font-weight: 700; }
   .shop-buy {
     background: #b0202f; color: #fff; border: none; border-radius: 8px;
-    padding: 8px 12px; font-weight: 700; cursor: pointer; font-size: 12px;
+    width: 82px; padding: 8px 0; font-weight: 700; cursor: pointer; font-size: 12px;
   }
   .shop-buy.equipped { background: #2e9c5a; }
+  .shop-buy.owned { background: #385b86; }
+  .shop-buy:disabled { background: #b9ad95; cursor: not-allowed; }
 
   /* ---- Flèches de navigation ---- */
   .nav-arrow {
@@ -180,40 +210,70 @@
         <span class="status" id="chat-status">En ligne · Phi-3.5 Finance</span>
       </div>
       <div class="chat-log" id="chat-log">
-        <div class="msg bot">Bonjour 👋 Je suis l'assistant financier de TechCorp. Posez-moi une question sur la finance, le budget, l'investissement ou l'économie.</div>
+        <div class="msg bot">Bonjour. Je suis l'assistant financier de TechCorp. Posez-moi une question sur la finance, le budget, l'investissement ou l'économie.</div>
       </div>
       <div class="chat-input">
         <input id="chat-text" type="text" placeholder="Votre question…" autocomplete="off" />
-        <button id="chat-send">➤</button>
+        <button id="chat-send">Envoyer</button>
       </div>
     </div>
   </div>
 
-  <div class="hint">Bouton ⏻ : allumer / éteindre · une fois <b>éteint</b> : molette pour zoomer, glisser pour le faire tourner (5 tours = surprise 🌟)</div>
+  <div class="hint">Bouton power : allumer / éteindre · une fois <b>éteint</b> : molette pour zoomer, glisser pour le faire tourner (5 tours = surprise)</div>
 
   <!-- Navigation banque <-> boutique -->
-  <button id="to-shop" class="nav-arrow" title="Aller à la boutique">🛍️ ▶</button>
-  <button id="to-bank" class="nav-arrow hidden" title="Retour à la banque">◀ Banque</button>
+  <button id="to-shop" class="nav-arrow" title="Aller à la boutique">Boutique</button>
+  <button id="to-bank" class="nav-arrow hidden" title="Retour à la banque">Banque</button>
 
   <!-- Boutique cosmétique -->
-  <button id="shop-btn">🤠 Boutique</button>
+  <button id="shop-btn">Boutique</button>
   <div id="shop-panel" class="hidden">
-    <div class="shop-head">Boutique cosmétique <span id="shop-close">✕</span></div>
-    <div class="shop-item">
-      <div class="shop-ico">🤠</div>
+    <div class="shop-head">Boutique cosmétique <span id="shop-close">X</span></div>
+    <div class="wallet">
+      <span>Solde</span>
+      <span id="wallet-balance">$0</span>
+    </div>
+    <div class="shop-item" data-cosmetic="cowboy">
       <div class="shop-info">
         <div class="shop-name">Chapeau de cowboy</div>
-        <div class="shop-price">Gratuit</div>
+        <div class="shop-price">$2</div>
       </div>
-      <button id="hat-toggle" class="shop-buy">Équiper</button>
+      <button class="shop-buy" data-buy="cowboy">Acheter</button>
     </div>
-    <div class="shop-item">
-      <div class="shop-ico">🎡</div>
+    <div class="shop-item" data-cosmetic="propeller">
       <div class="shop-info">
         <div class="shop-name">Casquette à hélice</div>
-        <div class="shop-price">Gratuit</div>
+        <div class="shop-price">$4</div>
       </div>
-      <button id="prop-toggle" class="shop-buy">Équiper</button>
+      <button class="shop-buy" data-buy="propeller">Acheter</button>
+    </div>
+    <div class="shop-item" data-cosmetic="crown">
+      <div class="shop-info">
+        <div class="shop-name">Couronne premium</div>
+        <div class="shop-price">$6</div>
+      </div>
+      <button class="shop-buy" data-buy="crown">Acheter</button>
+    </div>
+    <div class="shop-item" data-cosmetic="glasses">
+      <div class="shop-info">
+        <div class="shop-name">Lunettes de trader</div>
+        <div class="shop-price">$3</div>
+      </div>
+      <button class="shop-buy" data-buy="glasses">Acheter</button>
+    </div>
+    <div class="shop-item" data-cosmetic="tie">
+      <div class="shop-info">
+        <div class="shop-name">Nœud papillon Wall Street</div>
+        <div class="shop-price">$5</div>
+      </div>
+      <button class="shop-buy" data-buy="tie">Acheter</button>
+    </div>
+    <div class="shop-item" data-cosmetic="halo">
+      <div class="shop-info">
+        <div class="shop-name">Auréole néon</div>
+        <div class="shop-price">$8</div>
+      </div>
+      <button class="shop-buy" data-buy="halo">Acheter</button>
     </div>
   </div>
 
@@ -395,6 +455,64 @@
     propBeanie.position.set(0, 0.55, 0);
     propBeanie.visible = false;
     head.add(propBeanie);
+
+    // Couronne premium
+    const crownCosmetic = new THREE.Group();
+    const crownGold = new THREE.MeshStandardMaterial({ color: 0xf3c13a, emissive: 0x8a5a00, emissiveIntensity: 0.25, metalness: 0.6, roughness: 0.28 });
+    const crownGem = new THREE.MeshStandardMaterial({ color: 0x38e1d6, emissive: 0x38e1d6, emissiveIntensity: 1.1, roughness: 0.25 });
+    const crownBase = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.055, 10, 36), crownGold);
+    crownBase.rotation.x = Math.PI / 2; crownCosmetic.add(crownBase);
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI * 2;
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.42, 4), crownGold);
+      spike.position.set(Math.cos(a) * 0.48, 0.24, Math.sin(a) * 0.48);
+      spike.rotation.y = -a; crownCosmetic.add(spike);
+      const gem = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 12), crownGem);
+      gem.position.set(Math.cos(a) * 0.48, 0.48, Math.sin(a) * 0.48); crownCosmetic.add(gem);
+    }
+    crownCosmetic.position.set(0, 0.62, 0);
+    crownCosmetic.visible = false;
+    head.add(crownCosmetic);
+
+    // Lunettes de trader
+    const traderGlasses = new THREE.Group();
+    const glassDark = new THREE.MeshStandardMaterial({ color: 0x05070b, metalness: 0.25, roughness: 0.22 });
+    const glassFrame = new THREE.MeshStandardMaterial({ color: 0xf3c13a, metalness: 0.7, roughness: 0.25 });
+    for (const sx of [-1, 1]) {
+      const lens = new THREE.Mesh(new RoundedBoxGeometry(0.35, 0.2, 0.05, 3, 0.04), glassDark);
+      lens.position.set(sx * 0.28, 0.05, 0.69); traderGlasses.add(lens);
+      const frame = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.014, 8, 18), glassFrame);
+      frame.scale.y = 0.58; frame.position.set(sx * 0.28, 0.05, 0.715); traderGlasses.add(frame);
+    }
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.035, 0.035), glassFrame);
+    bridge.position.set(0, 0.05, 0.72); traderGlasses.add(bridge);
+    traderGlasses.visible = false;
+    head.add(traderGlasses);
+
+    // Noeud papillon Wall Street
+    const wallStreetTie = new THREE.Group();
+    const tieMat = new THREE.MeshStandardMaterial({ color: 0xb0202f, metalness: 0.08, roughness: 0.55 });
+    const bowCenter = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), tieMat);
+    bowCenter.scale.set(0.85, 0.75, 0.45); bowCenter.position.set(0, 0.73, 0.66); wallStreetTie.add(bowCenter);
+    for (const sx of [-1, 1]) {
+      const wing = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.36, 4), tieMat);
+      wing.rotation.z = sx * Math.PI / 2;
+      wing.rotation.y = Math.PI / 4;
+      wing.scale.set(1.15, 0.85, 0.7);
+      wing.position.set(sx * 0.22, 0.73, 0.66);
+      wallStreetTie.add(wing);
+    }
+    wallStreetTie.visible = false;
+    torso.add(wallStreetTie);
+
+    // Auréole néon
+    const neonHalo = new THREE.Group();
+    const neonRing = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.035, 12, 64), accentMat);
+    neonRing.rotation.x = Math.PI / 2; neonHalo.add(neonRing);
+    neonHalo.position.set(0, 1.18, 0);
+    neonHalo.visible = false;
+    head.add(neonHalo);
+
     // Ears / side caps
     for (const sx of [-1, 1]) {
       const ear = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.18, 20), darkMat);
@@ -692,11 +810,17 @@
     ssx.fillStyle = 'rgba(231,181,58,0.20)'; ssx.fillRect(0, 0, 640, 76);
     ssx.fillStyle = '#ffd86b'; ssx.font = 'bold 38px Segoe UI, sans-serif'; ssx.textAlign = 'center'; ssx.textBaseline = 'middle';
     ssx.fillText('BOUTIQUE COSMÉTIQUE', 320, 40);
-    [['🤠', 'Chapeau de cowboy', 'Gratuit'], ['🎡', 'Casquette à hélice', 'Gratuit']].forEach((it, i) => {
-      const y = 150 + i * 110;
-      ssx.textAlign = 'left'; ssx.font = '54px Segoe UI, sans-serif'; ssx.fillStyle = '#fff'; ssx.fillText(it[0], 40, y);
-      ssx.font = 'bold 32px Segoe UI, sans-serif'; ssx.fillStyle = '#dff7ff'; ssx.fillText(it[1], 130, y);
-      ssx.textAlign = 'right'; ssx.fillStyle = '#43e08a'; ssx.fillText(it[2], 600, y);
+    [
+      ['Chapeau cowboy', '$2'],
+      ['Lunettes trader', '$3'],
+      ['Casquette hélice', '$4'],
+      ['Nœud papillon', '$5'],
+      ['Couronne premium', '$6'],
+      ['Auréole néon', '$8'],
+    ].forEach((it, i) => {
+      const y = 108 + i * 46;
+      ssx.textAlign = 'left'; ssx.font = 'bold 26px Segoe UI, sans-serif'; ssx.fillStyle = '#dff7ff'; ssx.fillText(it[0], 64, y);
+      ssx.textAlign = 'right'; ssx.fillStyle = '#43e08a'; ssx.fillText(it[1], 600, y);
     });
     const shopScrTex = new THREE.CanvasTexture(shopScrCv);
     const shopScrFrame = new THREE.Mesh(new THREE.BoxGeometry(7.5, 4.6, 0.2),
@@ -867,7 +991,7 @@
       '> init secure-finance module ...',
       '> chargement Phi-3.5 Financial ...',
       '> calibration des capteurs ...',
-      '> PRÊT ✓',
+      '> PRET OK',
     ];
     function runBoot() {
       boot.innerHTML = '';
@@ -1079,7 +1203,9 @@
     const log = document.getElementById('chat-log');
     const input = document.getElementById('chat-text');
     const sendBtn = document.getElementById('chat-send');
+    const chatInput = document.querySelector('.chat-input');
     const chatStatus = document.getElementById('chat-status');
+    let pendingRequest = null;
     chatHead.classList.add('online');
 
     function addMsg(text, who) {
@@ -1091,9 +1217,10 @@
       return el;
     }
 
-    async function sendToModel(question) {
+    async function sendToModel(question, signal) {
       const response = await fetch('/api/chat', {
         method: 'POST',
+        signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [
@@ -1111,19 +1238,47 @@
       return data.content || "Le modèle n'a pas renvoyé de réponse.";
     }
 
+    function setPendingState(isPending) {
+      input.disabled = isPending;
+      sendBtn.textContent = isPending ? 'Stop' : 'Envoyer';
+      sendBtn.classList.toggle('cancel', isPending);
+    }
+
+    function cancelPendingRequest() {
+      if (!pendingRequest) return;
+      pendingRequest.abort();
+    }
+
     async function handleSend() {
+      if (pendingRequest) {
+        cancelPendingRequest();
+        return;
+      }
       const q = input.value.trim();
       if (!q) return;
       addMsg(q, 'user');
       input.value = '';
+      awardMoney(1);
+      showCoinPop();
       const pending = addMsg('…', 'bot');
+      const controller = new AbortController();
+      pendingRequest = controller;
+      setPendingState(true);
       try {
         chatStatus.textContent = 'Réflexion en cours…';
-        pending.textContent = await sendToModel(q);
+        pending.textContent = await sendToModel(q, controller.signal);
         chatStatus.textContent = 'En ligne · Phi-3.5 Finance';
       } catch (e) {
-        pending.textContent = '⚠️ ' + (e?.message || 'Erreur de connexion au modèle.');
-        chatStatus.textContent = 'Erreur · API indisponible';
+        if (e?.name === 'AbortError') {
+          pending.textContent = 'Requête annulée.';
+          chatStatus.textContent = 'En ligne · Phi-3.5 Finance';
+        } else {
+          pending.textContent = 'Erreur : ' + (e?.message || 'Erreur de connexion au modèle.');
+          chatStatus.textContent = 'Erreur · API indisponible';
+        }
+      } finally {
+        pendingRequest = null;
+        setPendingState(false);
       }
       log.scrollTop = log.scrollHeight;
     }
@@ -1133,29 +1288,90 @@
     // Empêche le drag du robot quand on tape dans le chat
     bellyChat.addEventListener('pointermove', (e) => e.stopPropagation());
 
-    // ---------- Boutique cosmétique (gratuite) ----------
+    // ---------- Boutique cosmétique ----------
     const shopBtn = document.getElementById('shop-btn');
     const shopPanel = document.getElementById('shop-panel');
     const shopClose = document.getElementById('shop-close');
-    const hatToggle = document.getElementById('hat-toggle');
-    const propToggle = document.getElementById('prop-toggle');
-    let equipped = 'none';                          // 'none' | 'cowboy' | 'propeller'
+    const walletBalance = document.getElementById('wallet-balance');
+    const cosmeticButtons = Array.from(document.querySelectorAll('[data-buy]'));
+    const cosmeticCatalog = {
+      cowboy: { price: 2, object: cowboyHat, hidesAntenna: true },
+      propeller: { price: 4, object: propBeanie, hidesAntenna: true },
+      crown: { price: 6, object: crownCosmetic, hidesAntenna: true },
+      glasses: { price: 3, object: traderGlasses, hidesAntenna: false },
+      tie: { price: 5, object: wallStreetTie, hidesAntenna: false },
+      halo: { price: 8, object: neonHalo, hidesAntenna: false },
+    };
+    let money = Number(localStorage.getItem('techcorp-money') || '0');
+    let owned = new Set(JSON.parse(localStorage.getItem('techcorp-owned') || '[]'));
+    let equipped = localStorage.getItem('techcorp-equipped') || 'none';
+
+    function saveShopState() {
+      localStorage.setItem('techcorp-money', String(money));
+      localStorage.setItem('techcorp-owned', JSON.stringify(Array.from(owned)));
+      localStorage.setItem('techcorp-equipped', equipped);
+    }
+
+    function awardMoney(amount) {
+      money += amount;
+      saveShopState();
+      renderShop();
+    }
+
+    function showCoinPop() {
+      const el = document.createElement('span');
+      el.className = 'coin-pop';
+      el.textContent = '+1$';
+      chatInput.appendChild(el);
+      el.addEventListener('animationend', () => el.remove(), { once: true });
+    }
+
+    function renderShop() {
+      walletBalance.textContent = '$' + money;
+      cosmeticButtons.forEach((button) => {
+        const name = button.dataset.buy;
+        const item = cosmeticCatalog[name];
+        const isOwned = owned.has(name);
+        const isEquipped = equipped === name;
+        button.disabled = !isOwned && money < item.price;
+        button.classList.toggle('owned', isOwned && !isEquipped);
+        button.classList.toggle('equipped', isEquipped);
+        button.textContent = isEquipped ? 'Retirer' : isOwned ? 'Équiper' : 'Acheter';
+      });
+    }
+
+    function buyOrEquip(name) {
+      const item = cosmeticCatalog[name];
+      if (!item) return;
+      if (!owned.has(name)) {
+        if (money < item.price) return;
+        money -= item.price;
+        owned.add(name);
+      }
+      setCosmetic(name);
+      saveShopState();
+      renderShop();
+    }
+
+    function applyCosmetic() {
+      Object.entries(cosmeticCatalog).forEach(([key, item]) => {
+        item.object.visible = equipped === key;
+      });
+      const hidesAntenna = equipped !== 'none' && cosmeticCatalog[equipped]?.hidesAntenna;
+      antenna.visible = !hidesAntenna;
+      antBall.visible = !hidesAntenna;
+    }
+
     function setCosmetic(name) {
       equipped = (equipped === name) ? 'none' : name;   // clic sur l'article équipé = retirer
-      cowboyHat.visible = equipped === 'cowboy';
-      propBeanie.visible = equipped === 'propeller';
-      const anyHat = equipped !== 'none';
-      antenna.visible = !anyHat;                    // l'antenne disparaît sous un chapeau
-      antBall.visible = !anyHat;
-      hatToggle.textContent = equipped === 'cowboy' ? 'Retirer' : 'Équiper';
-      hatToggle.classList.toggle('equipped', equipped === 'cowboy');
-      propToggle.textContent = equipped === 'propeller' ? 'Retirer' : 'Équiper';
-      propToggle.classList.toggle('equipped', equipped === 'propeller');
+      applyCosmetic();
     }
     shopBtn.addEventListener('click', () => shopPanel.classList.toggle('hidden'));
     shopClose.addEventListener('click', () => shopPanel.classList.add('hidden'));
-    hatToggle.addEventListener('click', () => setCosmetic('cowboy'));
-    propToggle.addEventListener('click', () => setCosmetic('propeller'));
+    cosmeticButtons.forEach((button) => button.addEventListener('click', () => buyOrEquip(button.dataset.buy)));
+    if (equipped !== 'none' && !owned.has(equipped)) equipped = 'none';
+    applyCosmetic();
+    renderShop();
 
     // Navigation banque <-> boutique
     const toShop = document.getElementById('to-shop');
